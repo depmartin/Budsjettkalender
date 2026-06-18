@@ -2,16 +2,16 @@
 
 Stabil teknisk referanse for prosjektet «Årshjul for budsjettfrister»: stack, mappestruktur og kommandoer. Endres sjelden. Designbeslutningene bak datamodellen står i `beslutningslogg.md`; brukerflate og roller i `../../BRUKERHISTORIER.md`; full systemarkitektur i `../../SYSTEMARKITEKTUR.md`.
 
-> STATUS: UTKAST. Stacken under er en **anbefaling** som skal bekreftes i første økt av fase 1 før kode skrives. Punkter merket «(bekreftes)» er ikke endelig valgt. Når et valg er tatt, oppdater dette dokumentet og loggfør valget med begrunnelse i `beslutningslogg.md`.
+> STATUS: Backend og database er bekreftet (2026-06-18, se beslutningsloggen). Punkter merket «(bekreftes)» er fortsatt anbefalinger, ikke endelig valgt. Når et valg tas, oppdater dette dokumentet og loggfør valget med begrunnelse i `beslutningslogg.md`.
 
 ## Teknologistabel
 
 Rammene er gitt av kravdokumentet (kap. 9) og ligger fast: drift på Azure, infrastruktur som kode i Bicep, innlogging med Entra ID (OpenID Connect), og et skarpt skille mellom frontend, backend-API, database og bakgrunnsjobb. Det konkrete språk-/rammeverksvalget er åpent og bør tas av hensyn til hvem som skal vedlikeholde løsningen internt.
 
-- **Backend-API** (bekreftes): ett rammeverk som dekker både API og den periodiske bakgrunnsjobben, slik at autorisering og synlighetsfiltrering ligger ett sted. All tilgangskontroll skjer her, aldri i frontend.
-- **Frontend** (bekreftes): serveres fra samme Azure-ledd som API-et. GitHub Pages er uegnet til den faktiske appen fordi den ikke kan håndheve tilgang; brukes på sin høyde til en åpen landingsside.
-- **Database** (bekreftes): Azure Database for PostgreSQL eller Azure SQL. `frist.synlig_for` lagres som en liste av gruppekoder (se SYSTEMARKITEKTUR.md kap. 3).
-- **Bakgrunnsjobb** (bekreftes): cron-utløst container-jobb eller timer-basert funksjon for periodisk oppdagelse.
+- **Backend-API** (BEKREFTET 2026-06-18): **.NET (LTS) / ASP.NET Core (C#)**, med Entity Framework Core som dataadgang. Samme kjøretid dekker både API og den periodiske bakgrunnsjobben, slik at autorisering og synlighetsfiltrering ligger ett sted. All tilgangskontroll skjer her, aldri i frontend.
+- **Frontend** (bekreftes): serveres fra samme Azure-ledd som API-et. Naturlige kandidater med .NET er Blazor (samme språk/stack, enklest for ett internt team) eller en JS-SPA (React/Angular). GitHub Pages er uegnet til den faktiske appen fordi den ikke kan håndheve tilgang; brukes på sin høyde til en åpen landingsside.
+- **Database** (BEKREFTET 2026-06-18): **Azure SQL**, aksessert via EF Core. `frist.synlig_for` (liste av gruppekoder, se SYSTEMARKITEKTUR.md kap. 3) modelleres relasjonelt med en koblingstabell (frist ↔ gruppekode), slik at server-side synlighetsfiltrering blir en indeksert join.
+- **Bakgrunnsjobb** (bekreftes): foretrukket som en .NET `BackgroundService`/Worker i samme løsning som API-et (delt forretnings- og autoriseringslag), timer-utløst for periodisk oppdagelse. Alternativ: separat timer-utløst Azure Functions/container-jobb.
 - **Datouttrekk** (bekreftes): språkmodell brukes til tolkning av frister i rundskriv der formuleringene varierer (kravdokumentet 4.4). Modell/leverandør og presisjonsgrad besluttes senere; uttrekket må uansett levere strukturert per-felt-resultat med tolket verdi, kildespenn og konfidens (SYSTEMARKITEKTUR.md 3.2). For oppdaterte API-detaljer, se https://docs.claude.com/en/api/overview.
 - **Hosting** (bekreftes): Azure App Service eller Container Apps.
 - **Identitet**: Entra ID. Backend validerer token på hver forespørsel; navn/identitet hentes fra token-claims.
@@ -37,14 +37,16 @@ Rammene er gitt av kravdokumentet (kap. 9) og ligger fast: drift på Azure, infr
 
 ## Kommandoer (kjør disse, ikke gjett)
 
-(Fylles ut med faktiske kommandoer når stacken er valgt, så agenten kjører rett verktøy framfor å gjette.)
+(.NET-kommandoer. Endelige prosjekt-/sti-navn settes når solution-oppsettet lages i fase 1.)
 
-- Installer: (f.eks. `npm install`)
-- Kjør lokalt: (f.eks. `npm run dev`)
-- Test: (f.eks. `npm test`)
-- Bygg: (f.eks. `npm run build`)
-- Infra (what-if): (f.eks. `az deployment group what-if ...`)
-- Infra (deploy): (via GitHub Actions; lokal kommando ved behov)
+- Gjenopprett pakker: `dotnet restore`
+- Bygg: `dotnet build`
+- Kjør lokalt: `dotnet run --project backend`
+- Test: `dotnet test`
+- EF-migrasjon (ny): `dotnet ef migrations add <Navn>`
+- EF-migrasjon (oppdater db): `dotnet ef database update`
+- Infra (what-if): `az deployment group what-if -g <rg> -f infra/main.bicep`
+- Infra (deploy): via GitHub Actions (`.github/workflows`); lokal `az deployment group create` ved behov
 
 ## Datamodell
 

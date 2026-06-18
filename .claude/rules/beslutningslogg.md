@@ -4,12 +4,17 @@ Kronologisk. Nyeste øverst. Hver oppføring: dato, beslutning, begrunnelse, kon
 Dette er prosjektets hukommelse mellom økter. Les hele ved start av hver økt.
 
 ## Status nå
-- Aktiv fase: Fase 0 → klar for Fase 1. Kontekstapparat og mappestruktur er etablert.
-- Sist fullført: Igangsetting (Del A i utviklingsplanen) — CLAUDE.md opprettet, hukommelsesfilene flyttet til `.claude/rules/`, tom mappestruktur (infra, backend, backend/kilder, backend/jobb, frontend, .github/workflows) opprettet med plassholdere, README oppdatert. Forut: designgjennomgang (BRUKERHISTORIER.md, SYSTEMARKITEKTUR.md).
-- Neste steg: Fase 1 (fundament) — bekreft teknologivalg og fyll ut arkitektur.md (stack + kommandoer), sett opp datamodell inkl. utvidelsene under, Entra-innlogging og server-side synlighetsfiltrering.
-- Åpne spørsmål: De fire IT-forholdene i kravdokumentets kap. 12 (sky-/sikkerhetsgodkjenning, tverrdepartemental Entra-tilgang, attributt→gruppe-mapping, lagring av FIN-interne frister). Endelig språk-/rammeverksvalg for stack ikke besluttet.
+- Aktiv fase: Fase 0 → klar for Fase 1. Kontekstapparat, mappestruktur og backend-/database-valg er på plass.
+- Sist fullført: Backend- og database-valg bekreftet (.NET/ASP.NET Core + Azure SQL) og skrevet inn i arkitektur.md. Forut: igangsetting (Del A) og designgjennomgang.
+- Neste steg: Legg fram en Fase 1-plan (fundament) til godkjenning før koding: solution-/prosjektoppsett, datamodell inkl. utvidelsene under, Entra-innlogging, funksjonsroller, server-side synlighetsfiltrering, de tre visningene, grunnleggende Bicep.
+- Åpne spørsmål: De fire IT-forholdene i kravdokumentets kap. 12 (sky-/sikkerhetsgodkjenning, tverrdepartemental Entra-tilgang, attributt→gruppe-mapping, lagring av FIN-interne frister). Frontend-rammeverk, hosting-form (App Service vs. Container Apps) og bakgrunnsjobb-form ennå ikke endelig valgt.
 
 ## Beslutninger
+
+### [2026-06-18] Stack: backend .NET/ASP.NET Core, database Azure SQL
+- Beslutning: Backend-API og bakgrunnsjobb bygges i .NET (LTS) / ASP.NET Core (C#) med EF Core, og databasen er Azure SQL. `frist.synlig_for` modelleres med en koblingstabell (frist ↔ gruppekode). Frontend-rammeverk, hosting-form og bakgrunnsjobb-form er fortsatt åpne.
+- Begrunnelse: .NET gir tett, godt støttet integrasjon mot Entra ID og Azure og er lett å vedlikeholde internt; Azure SQL passer tett sammen med .NET/EF Core. Ett rammeverk dekker API + jobb, slik at autorisering og synlighetsfiltrering ligger ett sted.
+- Konsekvens: arkitektur.md oppdatert med stack og .NET-kommandoer. Fase 1 starter med solution-oppsett og EF Core-datamodell. Server-side synlighetsfiltrering blir en indeksert join mot koblingstabellen.
 
 ### [2026-06-18] Kontekstapparat og mappestruktur etablert (igangsetting)
 - Beslutning: Opprettet `CLAUDE.md` i rot og flyttet `beslutningslogg.md` og `arkitektur.md` til `.claude/rules/` slik opplegget (claude-md-opplegg.md) og utviklingsplanens Del A foreskriver. Opprettet tom mappestruktur med plassholder-README-er. Stacken er bevisst IKKE valgt nå.
