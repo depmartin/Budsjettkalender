@@ -56,7 +56,7 @@ Designet skiller tydeligere mellom et publisert frist-objekt og et forslag enn k
 
 **Felles for alle forslag:** opphav (`robot`, `bruker` eller `admin`), kilde eller innsenders identitet, de foreslåtte fristfeltene, og foreslått synlighet.
 
-**Utvidelse — uttrekksbevis på robotforslag.** Et forslag fra den automatiske innhentingen bærer, per felt, både den tolkede verdien, tekstutdraget verdien er hentet fra, og et konfidensnivå som avgjør om et per-felt usikkerhetsflagg tennes i grensesnittet. Dette betyr at datouttrekket (kravdokumentets 4.4) ikke kan returnere bare en ferdig dato, men må levere et strukturert per-felt-resultat med kildespenn og usikkerhetsmarkering. Denne informasjonen hører til forslaget. Når forslaget godkjennes, er det den rene fristen som lever videre; uttrekksbeviset arkiveres med forslaget og følger ikke den publiserte fristen.
+**Utvidelse — uttrekksbevis på robotforslag.** Et forslag fra den automatiske innhentingen bærer, per felt, både den tolkede verdien, tekstutdraget verdien er hentet fra, og et konfidensnivå. Dette betyr at datouttrekket (kravdokumentets 4.4) ikke kan returnere bare en ferdig dato, men må levere et strukturert per-felt-resultat med kildespenn og usikkerhetsmarkering. Det per-felt usikkerhetsflagget som tennes i grensesnittet, styres av deterministiske, verifiserbare regler (se 5), ikke av modellens egenvurdering alene; konfidensnivået er ett bidrag, aldri eneste utløser. Tekstutdraget vises alltid ved siden av den tolkede verdien i køen. Denne informasjonen hører til forslaget. Når forslaget godkjennes, er det den rene fristen som lever videre; uttrekksbeviset arkiveres med forslaget og følger ikke den publiserte fristen.
 
 **Utvidelse — endringsforslag.** Et endringsforslag refererer en eksisterende, publisert frist via et felt `endrer_frist_id` og bærer de foreslåtte nye verdiene ved siden av de gjeldende. Den publiserte fristen endres ikke mens forslaget venter; den oppdateres først ved godkjenning. Flere endringsforslag kan referere samme frist samtidig, og de behandles uavhengig — godkjenning av det ene avviser ikke automatisk det andre. Administratorvisningen utleder et «venter endring»-merke på en frist ved å slå opp om det finnes minst ett åpent forslag med `endrer_frist_id` lik fristens id.
 
@@ -66,7 +66,9 @@ Uendret fra kravdokumentet. Malen lagrer regler, ikke datoer. De tre regeltypene
 
 ### 3.4 Behandlet dokument
 
-Uendret fra kravdokumentet. Registeret hindrer at samme rundskriv foreslås flere ganger, med en stabil `dokument_nokkel` og en `innhold_hash`. Et dokument som er registrert, gir ikke nye forslag — uavhengig av om fristene fra det tidligere ble godkjent eller avvist. Dette gjelder rundskriv; mekanismen er bevisst atskilt fra avviste brukerforslag, som derimot kan gjenbrukes.
+Registeret hindrer at samme rundskriv foreslås flere ganger, med en stabil `dokument_nokkel` og en `innhold_hash`. Et dokument som er registrert, gir ikke nye forslag — uavhengig av om fristene fra det tidligere ble godkjent eller avvist. Dette gjelder rundskriv; mekanismen er bevisst atskilt fra avviste brukerforslag, som derimot kan gjenbrukes. En kjent `dokument_nokkel` med ny `innhold_hash` gir ikke et dublettforslag, men flagges som «oppdatert versjon» til administrator.
+
+**Utvidelse — uttrekk-mellomtilstand med forsøksteller.** Et dokument er ikke ferdigbehandlet i det øyeblikket det er oppdaget: nedlasting (`hent()`) og uttrekk kan feile eller måtte gjentas. Modellen må derfor kunne uttrykke en mellomtilstand for et dokument som er oppdaget, men ennå ikke ferdig hentet/uttrukket, med en forsøksteller. Et dokument som feiler i `hent()` prøves et fast antall ganger over påfølgende kjøringer, og flagges til administrator når grensen er nådd — det forsvinner aldri stille (se 5). Om mellomtilstanden bor i selve registeret eller i en egen arbeidskø, avgjøres ved kodestart; begge oppfyller kravet.
 
 ### 3.5 Bruker
 
@@ -100,9 +102,15 @@ Administrators innsynsfunksjoner (se @BRUKERHISTORIER.md 4.8) gjenbruker denne m
 
 Innhenting bygges bak et `Kilde`-grensesnitt med operasjonene `oppdag()` og `hent()`, slik at flere kilder kan kobles på senere uten ombygging. Første implementasjon er `RegjeringenKilde`; resten av systemet er kildeagnostisk.
 
+Grensesnittet uttrykker utfall, ikke bare data. `oppdag()` skiller tre tilstander: fant nye, ingen nye (men kjørte greit), og klarte ikke parse. En tom liste fra en vellykket kjøring skilles dermed fra en feilet kjøring, slik at en stille periode uten nye rundskriv aldri forveksles med en stille feil (for eksempel at oversiktssidens struktur er endret).
+
 Oppdagelsesjobben kjører periodisk, leser oversiktssiden, og sjekker hvert dokument mot registeret over behandlede dokumenter før den lager forslag. Totrinns filtrering skiller årlige rundskriv fra varig regelverk (nummerserie), og matcher deretter tittel mot kjente løpsmønstre. Et årlig rundskriv uten kjent tittelmønster kastes ikke, men legges i køen som «ukjent type» til manuell vurdering.
 
 Datouttrekket bruker språkmodell til tolkning der formuleringene varierer, og leverer det strukturerte per-felt-resultatet beskrevet i 3.2 — tolket verdi, kildespenn og konfidens per felt. Relative frister i kilden («ultimo mars») mappes til gjentaksregler framfor harde datoer. Alt uttrekk er forslag.
+
+Det per-felt usikkerhetsflagget styres av deterministiske, verifiserbare regler, slik at det er testbart og ikke avhenger av modellens selvtillit. Flagget tennes blant annet når en relativ formulering er tolket til en hard dato, når kildespennet ikke inneholder en gjenkjennelig dato, eller når en fornuftsregel er brutt (for eksempel en dato utenfor budsjettløpets forventede vindu). Modellens egenkonfidens inngår som ett bidrag, men er aldri eneste utløser.
+
+**Liveness og stille feil.** Et automatisk ledd som svikter stille er verre enn ingen automatikk; administrator må kunne se at innhentingen lever og hvor den eventuelt står. «Klarte ikke parse» fra `oppdag()` varsler administrator. Administratorflaten viser «sist vellykkede innhenting», der `oppdag()` og `hent()`/uttrekk spores hver for seg, slik at det fremgår hvilket ledd som eventuelt står stille. Et dokument som gjentatte ganger feiler i `hent()` flagges til administrator når forsøksgrensen er nådd (3.4).
 
 Kildelenken som vises på leserflaten (se @BRUKERHISTORIER.md 2.6) bygger på fristens `dokument_id` og dokumentets URL i behandlet-dokument-registeret. Lenken vises kun når den finnes, og arver fristens synlighet; måldokumentet er offentlig, så det oppstår ingen lekkasje.
 
@@ -136,7 +144,13 @@ Valgårslogikken bygger på at den norske valgsyklusen er fast og kan beregnes: 
 
 ---
 
-## 9. Forhold som må avklares med IT før produksjon
+## 9. Utskrift til Word
+
+Administrator kan eksportere frister til et Word-dokument i FINs notatmal (kravdokumentets kap. 8). Funksjonen tar to valg — gruppe og periode — og utvalget er fristene der `synlig_for` inneholder gruppens `kode` innenfor perioden. Dermed gir «skriv ut for `POL`» nøyaktig det settet politisk ledelse selv ville sett, og «skriv ut for `FAG`» utelater FIN-interne frister. Genereringen skjer i backend, der tilgang og data allerede er kjent, slik at utvalget er en gjenbruk av den samme server-side synlighetsfiltreringen som ellers (4).
+
+Dokumentet bærer en synlig topptekst generert fra det faktiske utvalgskriteriet (gruppe og periode), slik at en utskrift ikke kan forveksles med en annen gruppes utvalg. Administrator kan i tillegg velge «alt» (eget fulle innsyn) for internt bruk; denne varianten merkes tydeligst som FIN-internt. Selve utskriftshandlingen logges ikke — i tråd med linjen om å unngå egen handlingslogging der aktivt administrator-innsyn (4) dekker kontrollbehovet.
+
+## 10. Forhold som må avklares med IT før produksjon
 
 Følgende forhold fra kravdokumentets kapittel 12 er forutsetninger for arkitekturen og må avklares med IT før produksjonsdata legges inn: IT- og sikkerhetsgodkjenning av skyløsningen, tverrdepartemental Entra-tilgang (multi-tenant eller gjestebruker, som avgjør om `FAG`-brukere kan autentiseres), konkret mapping fra Entra-attributter til synlighetsgrupper, og bekreftelse på at lagring og filtrering på Azure tilfredsstiller departementets krav til FIN-interne frister. Tverrdepartemental tilgang og endelig attributtmapping kan utvikles mot FINs egen tenant i mellomtiden.
 

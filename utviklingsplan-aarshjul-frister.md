@@ -98,6 +98,8 @@ Leveranser:
 - Utskrift til Word i FINs notatmal, med valg av gruppe og periode. Utvalget følger den valgte gruppens faktiske tilgang, og genereringen skjer i backend der tilgang og data er kjent.
 - Bakgrunnsjobb i Azure for periodisk oppdagelse.
 
+Den detaljerte, kode-forankrede byggeplanen for fase 2 — med leveransene brutt ned i verifiserbare steg, nødvendige modelltillegg og åpne spørsmål — står i @fase2-plan.md. Planleggingen skjerpet designet på fem punkter, alle loggført i beslutningsloggen og innarbeidet i SYSTEMARKITEKTUR.md og BRUKERHISTORIER.md: kildegrensesnittet uttrykker utfall (fant nye / ingen nye / klarte ikke parse), innhentingen har liveness med «sist vellykkede innhenting» og varsling ved stille feil, behandlet-dokument-registeret får en uttrekk-mellomtilstand med forsøksteller, det per-felt usikkerhetsflagget styres av deterministiske regler framfor modellens konfidens alene, og Word-utskriften bærer en utvalgs-topptekst (med «alt» tydeligst FIN-internt) uten at handlingen logges.
+
 Verifikasjon før fase 2 regnes som fullført:
 
 - Et nytt årlig rundskriv på oversiktssiden gir forslag i køen, og samme rundskriv gir ikke nytt forslag ved neste kjøring.

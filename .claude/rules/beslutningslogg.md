@@ -4,18 +4,43 @@ Kronologisk. Nyeste øverst. Hver oppføring: dato, beslutning, begrunnelse, kon
 Dette er prosjektets hukommelse mellom økter. Les hele ved start av hver økt.
 
 ## Status nå
-- Aktiv fase: **Fase 1 (fundament) AVSLUTTET 2026-06-18.** Alt arbeid ligger på branch `claude/eager-bell-7y9tm2` / **PR #1** (CI grønt). PR-en er klar for review/merge. **Fase 2 startes i ny økt.**
+- Aktiv fase: **Fase 1 (fundament) AVSLUTTET 2026-06-18 og PR #1 MERGET til main.** Fase 1-koden ligger nå på `main`. **Fase 2-planlegging foreligger** (`fase2-plan.md` i rot, forankret i fase 1-koden); **fase 2-koding gjenstår** og startes i ny økt.
 - Sist fullført: Fase 1 steg 1–8 + kodegjennomgang av PR #1 med rettinger. Fem bekreftede funn rettet: (1) EF identitetskonflikt ved redigering som beholder en gruppe, (2) budsjettårsfilter som kollapset, (3) sikkerhet — claims-transformasjonen stripper nå forfalskede rolle-/gruppeclaims, (4) async void rev kretsen ved lastefeil, (5) «i dag» beregnes i norsk tid, ikke UTC. 23/23 tester grønt; Bicep kompilerer.
 - Neste steg (Fase 2 — START HER i ny økt):
   1. Les `CLAUDE.md` + denne loggen + `arkitektur.md` (særlig «Miljøoppsett» — .NET 10 SDK må installeres i ferskt miljø — og «Fase 1 — implementert» for hvor koden bor).
   2. Bekreft at `dotnet test backend/Aarshjul.slnx` er grønt før ny kode.
-  3. Legg fram en Fase 2-plan til godkjenning (regelen om plan-før-kode gjelder).
+  3. Fase 2-plan foreligger i `fase2-plan.md` (i rot) — forankret i fase 1-koden, med byggesteg, modelltillegg og åpne spørsmål. Få den godkjent før kode (regelen om plan-før-kode gjelder).
   4. Fase 2-leveranser: `Kilde`-grensesnitt (`oppdag()`/`hent()`) + `RegjeringenKilde` i `backend/kilder`; oppdagelse + dedup mot `BehandletDokument`; totrinns filtrering (nummerserie + tittelmønster); datouttrekk (språkmodell, per-felt-bevis); **godkjenningskø** (gjenbruk `Synlighetsfilter`; publisering av godkjent forslag via samme mønster som `FristskrivingTjeneste`); brukerforslag (bidragsyter) + `Varsel`; Word-utskrift per gruppe/periode; bakgrunnsjobb i `backend/jobb` (form avklares). Tabellene Forslag/UttrekksBevis/BehandletDokument/Gjentaksregel/Varsel finnes allerede i modellen.
   5. Ekte ende-til-ende-verifisering av Fase 1 (mot reell Azure SQL/Entra-tenant) er en utrullingsoppgave, ikke en kodeoppgave.
 - Åpne spørsmål: De fire IT-forholdene i kravdokumentets kap. 12. Konkret Entra attributt→gruppe-mapping (mekanismen er konfigurerbar via EntraGrupper-seksjonen; verdier avklares med IT). Lokal/CI-kjøring krever .NET 10 SDK (installeres i miljøet) og en database for integrasjon mot ekte SQL.
 - Driftsherding før produksjon (identifisert i gjennomgangen, utsatt til utrulling): (a) databasemigrering bør kjøres som eget deploy-steg, ikke ved app-oppstart (unngå crash-loop ved utilgjengelig/pauset DB og race ved skalering); (b) SQL-brannmurens «Allow Azure services» (0.0.0.0) er bred for FIN-interne data — vurder strammere nettverksisolering; (c) web-appens managed identity må gis DB-bruker via T-SQL (dokumentert i infra/README); (d) `HttpSynlighetskontekst` er global ISynlighetskontekst-binding — fungerer for dagens kall, men komponenter må bruke Synlighetskontekstkilde i kretsen.
 
 ## Beslutninger
+
+### [2026-06-18] Fase 2-planlegging forankret i fase 1-koden (etter merge av PR #1)
+- Beslutning: Etter at PR #1 (full fase 1) ble merget til main, ble den detaljerte fase 2-planen skrevet om til å være forankret i den faktiske .NET-koden (`fase2-plan.md`): hvert byggesteg er kartlagt til hvor det bor (`backend/kilder`, `backend/jobb`, Application-tjenester, Web/admin), og gjenbruker `Synlighetsfilter`, `FristskrivingTjeneste`-mønsteret og auth-policyene. Designet er innarbeidet i SYSTEMARKITEKTUR.md (3.2, 3.4, 5, ny kap. 9) og BRUKERHISTORIER.md (4.1, 4.2, 4.6, ny 4.12). To modelltillegg er identifisert som nødvendige i fase 2 (krever EF-migrasjon): forsøksteller/mellomtilstand på `BehandletDokument`, og et liveness-spor for «sist vellykkede innhenting».
+- Begrunnelse: Min fase 2-planlegging var opprinnelig gjort stack-agnostisk på en dokument-only main, før jeg oppdaget at PR #1 allerede hadde kodet fase 1 i .NET. Planen måtte forankres i den reelle koden for å være brukbar.
+- Konsekvens: Stack/DB/frontend/datamodell er ikke lenger åpne spørsmål. Gjenstående åpne forhold er listet i fase2-plan.md kap. 8.
+
+### [2026-06-18] Fase 2-design: kildegrensesnittet uttrykker utfall
+- Beslutning: `Kilde.oppdag()` returnerer en utfallstilstand — fant nye / ingen nye / klarte ikke parse — ikke bare en liste. En tom liste fra en vellykket kjøring skilles fra en feilet kjøring.
+- Begrunnelse: Stille feil (endret sidestruktur) må ikke kunne forveksles med en stille periode uten nye rundskriv.
+- Konsekvens: Utfallet driver liveness og varsling. Gjelder alle kilder bak grensesnittet i `backend/kilder`.
+
+### [2026-06-18] Fase 2-design: liveness og stille-feil-varsling
+- Beslutning: «Klarte ikke parse» varsler administrator. Admin-flaten viser «sist vellykkede innhenting» med `oppdag()` og `hent()`/uttrekk sporet hver for seg. Et dokument som feiler i `hent()` prøves et fast antall ganger (forsøksteller på `BehandletDokument`) og flagges til administrator når grensen er nådd.
+- Begrunnelse: Et automatisk ledd som svikter stille er verre enn ingen automatikk; administrator må se at innhentingen lever og hvor den eventuelt står.
+- Konsekvens: Krever modelltillegg (forsøksteller + liveness-spor) og EF-migrasjon i fase 2.
+
+### [2026-06-18] Fase 2-design: usikkerhetsflagg styres av deterministiske regler
+- Beslutning: Per-felt usikkerhetsflagg på robotuttrekk tennes av verifiserbare regler (relativ formulering tolket til hard dato, kildespenn uten gjenkjennelig dato, brutt fornuftsregel). `UttrekksBevis.Konfidens` er ett bidrag, aldri eneste utløser. Kildeutdraget vises alltid ved siden av tolket verdi.
+- Begrunnelse: Et flagg som bare speiler modellens selvtillit er ikke testbart og gir ikke administrator et pålitelig kontrollpunkt.
+- Konsekvens: Flagg-logikken bygges i Application-laget over `UttrekksBevis`; gir konkrete, testbare akseptkriterier.
+
+### [2026-06-18] Fase 2-design: Word-utskrift med utvalgs-topptekst, ingen logging
+- Beslutning: Word-utskriften bærer en synlig topptekst generert fra det faktiske utvalgskriteriet (gruppe + periode). «Alt»-utskrift merkes tydeligst som FIN-internt. Selve utskriftshandlingen logges ikke.
+- Begrunnelse: En utskrift må ikke kunne forveksles med en annen gruppes utvalg; «alt» er mest sensitivt. Logging av utskrift gir liten verdi mot kontrollkostnaden (jf. linjen om å unngå egen POL-logging).
+- Konsekvens: Generatoren (backend) utleder toppteksten fra utvalgsparametrene; utvalget bruker `Synlighetsfilter`.
 
 ### [2026-06-18] Fase 1 avsluttet og kodegjennomgang gjennomført
 - Beslutning: Avsluttet Fase 1 etter en strukturert kodegjennomgang av PR #1 (fire fokuserte review-agenter: sikkerhet/auth, datalag, Blazor, infra). Fem bekreftede feil ble rettet og dekket av nye regresjonstester (se Status nå). Driftsherding (migrering ved oppstart, SQL-brannmurens bredde, MI-DB-bruker, default ISynlighetskontekst-binding) er bevisst utsatt til utrullingsfasen og listet under «Åpne spørsmål». Stack-anbefalingene som gjensto er nå bekreftet i praksis: hosting = Azure App Service (Linux, .NET 10).
