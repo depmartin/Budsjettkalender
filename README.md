@@ -34,5 +34,20 @@ Drift på Azure med infrastruktur som kode (Bicep).
 
 ## Status
 
-Fase 0 — design og spesifikasjon er fullført. Kontekstapparat og mappestruktur er etablert.
-Neste steg er Fase 1 (fundament); se «Status nå» i `.claude/rules/beslutningslogg.md`.
+**Fase 1 (fundament) er ferdig** og ligger i PR #1: .NET 10 / ASP.NET Core + EF Core,
+Azure SQL, Blazor (Interactive Server), server-side synlighetsfiltrering, Entra-innlogging,
+manuell innlegging, de tre visningene, administrator-innsyn, og grunnleggende Bicep + CI.
+23 tester grønt. Neste er Fase 2 (automatikk: kilde, godkjenningskø, brukerforslag,
+Word-utskrift, bakgrunnsjobb).
+
+Se `.claude/rules/beslutningslogg.md` («Status nå») for fremdrift og neste steg, og
+`.claude/rules/arkitektur.md` for stack, miljøoppsett og kommandoer.
+
+### Bygg og test
+
+Krever .NET 10 SDK (se «Miljøoppsett» i `arkitektur.md` hvis det mangler i miljøet).
+
+```bash
+dotnet build backend/Aarshjul.slnx
+dotnet test backend/Aarshjul.slnx
+```

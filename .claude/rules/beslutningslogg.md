@@ -4,13 +4,23 @@ Kronologisk. Nyeste øverst. Hver oppføring: dato, beslutning, begrunnelse, kon
 Dette er prosjektets hukommelse mellom økter. Les hele ved start av hver økt.
 
 ## Status nå
-- Aktiv fase: Fase 1 (fundament) — alle åtte byggesteg implementert. Klar for gjennomgang/verifisering i PR #1 før Fase 2.
+- Aktiv fase: **Fase 1 (fundament) AVSLUTTET 2026-06-18.** Alt arbeid ligger på branch `claude/eager-bell-7y9tm2` / **PR #1** (CI grønt). PR-en er klar for review/merge. **Fase 2 startes i ny økt.**
 - Sist fullført: Fase 1 steg 1–8 + kodegjennomgang av PR #1 med rettinger. Fem bekreftede funn rettet: (1) EF identitetskonflikt ved redigering som beholder en gruppe, (2) budsjettårsfilter som kollapset, (3) sikkerhet — claims-transformasjonen stripper nå forfalskede rolle-/gruppeclaims, (4) async void rev kretsen ved lastefeil, (5) «i dag» beregnes i norsk tid, ikke UTC. 23/23 tester grønt; Bicep kompilerer.
-- Neste steg: Verifiser fase 1 (manuelt mot en faktisk DB/Entra-tenant), deretter planlegg Fase 2 (RegjeringenKilde, oppdagelse, dedup, datouttrekk, godkjenningskø, brukerforslag, Word-utskrift, bakgrunnsjobb). Hosting bekreftet som App Service; bakgrunnsjobb-form avklares i Fase 2.
+- Neste steg (Fase 2 — START HER i ny økt):
+  1. Les `CLAUDE.md` + denne loggen + `arkitektur.md` (særlig «Miljøoppsett» — .NET 10 SDK må installeres i ferskt miljø — og «Fase 1 — implementert» for hvor koden bor).
+  2. Bekreft at `dotnet test backend/Aarshjul.slnx` er grønt før ny kode.
+  3. Legg fram en Fase 2-plan til godkjenning (regelen om plan-før-kode gjelder).
+  4. Fase 2-leveranser: `Kilde`-grensesnitt (`oppdag()`/`hent()`) + `RegjeringenKilde` i `backend/kilder`; oppdagelse + dedup mot `BehandletDokument`; totrinns filtrering (nummerserie + tittelmønster); datouttrekk (språkmodell, per-felt-bevis); **godkjenningskø** (gjenbruk `Synlighetsfilter`; publisering av godkjent forslag via samme mønster som `FristskrivingTjeneste`); brukerforslag (bidragsyter) + `Varsel`; Word-utskrift per gruppe/periode; bakgrunnsjobb i `backend/jobb` (form avklares). Tabellene Forslag/UttrekksBevis/BehandletDokument/Gjentaksregel/Varsel finnes allerede i modellen.
+  5. Ekte ende-til-ende-verifisering av Fase 1 (mot reell Azure SQL/Entra-tenant) er en utrullingsoppgave, ikke en kodeoppgave.
 - Åpne spørsmål: De fire IT-forholdene i kravdokumentets kap. 12. Konkret Entra attributt→gruppe-mapping (mekanismen er konfigurerbar via EntraGrupper-seksjonen; verdier avklares med IT). Lokal/CI-kjøring krever .NET 10 SDK (installeres i miljøet) og en database for integrasjon mot ekte SQL.
 - Driftsherding før produksjon (identifisert i gjennomgangen, utsatt til utrulling): (a) databasemigrering bør kjøres som eget deploy-steg, ikke ved app-oppstart (unngå crash-loop ved utilgjengelig/pauset DB og race ved skalering); (b) SQL-brannmurens «Allow Azure services» (0.0.0.0) er bred for FIN-interne data — vurder strammere nettverksisolering; (c) web-appens managed identity må gis DB-bruker via T-SQL (dokumentert i infra/README); (d) `HttpSynlighetskontekst` er global ISynlighetskontekst-binding — fungerer for dagens kall, men komponenter må bruke Synlighetskontekstkilde i kretsen.
 
 ## Beslutninger
+
+### [2026-06-18] Fase 1 avsluttet og kodegjennomgang gjennomført
+- Beslutning: Avsluttet Fase 1 etter en strukturert kodegjennomgang av PR #1 (fire fokuserte review-agenter: sikkerhet/auth, datalag, Blazor, infra). Fem bekreftede feil ble rettet og dekket av nye regresjonstester (se Status nå). Driftsherding (migrering ved oppstart, SQL-brannmurens bredde, MI-DB-bruker, default ISynlighetskontekst-binding) er bevisst utsatt til utrullingsfasen og listet under «Åpne spørsmål». Stack-anbefalingene som gjensto er nå bekreftet i praksis: hosting = Azure App Service (Linux, .NET 10).
+- Begrunnelse: Fasens hovedkvalitetskrav (server-side synlighet verifisert på API-svaret) er oppfylt og testdekket. Resten er drift som hører til utrulling, ikke fundamentkoden.
+- Konsekvens: PR #1 er klar for review/merge. Fase 2 starter i ny økt fra punktene i «Status nå»; arkitektur.md har miljøoppsett og kart over hvor Fase 1-koden bor.
 
 ### [2026-06-18] Fase 1 fundament implementert (steg 1–8)
 - Beslutning: Bygde hele Fase 1 på .NET 10. Sikkerhetskjernen: ett `Synlighetsfilter` som både Blazor-visningene og minimal-API-et bruker; rolle/grupper bæres som claims satt fra DB via en claims-transformasjon; manuell innlegging validerer at synlighet er valgt (POL kun ved aktivt valg). Tester (20) dekker filtrering på tjeneste- og HTTP-nivå, datoberegning og innleggingsvalidering. Infra som Bicep (App Service Linux + Azure SQL serverless med Entra-only auth + Key Vault RBAC + App Insights); deploy via manuell GitHub Actions-workflow med OIDC.
