@@ -195,14 +195,38 @@ Hvordan `DokumentNokkel`/`InnholdHash` er utledet; valgt verktøy/modell for dat
 og oppnådd presisjon; hvordan kildeabstraksjonen er formet for senere kilder; valgt
 form for bakgrunnsjobben; og hvor mellomtilstanden/forsøkstelleren havnet.
 
-## 8. Åpne spørsmål (avklares i fasen)
-- **FINs notatmal:** finnes en malfil (.dotx) å bygge Word-eksporten på?
-- **Datouttrekk/LLM:** rundskrivene er offentlige (ikke personvernsperre); endelig
-  leverandør/SDK og prompt-/skjemaoppsett bekreftes.
-- **`DokumentNokkel`-format** og eldre PDF-URL-varianter (steg B/C).
-- **Plassering av mellomtilstand/forsøksteller** (felt på `BehandletDokument` vs. egen
-  arbeidskø) — steg C.
-- **Bakgrunnsjobb-form** (`BackgroundService` vs. Azure Functions/container) — steg L.
+## 8. Avklarte designvalg (lukket i planleggingen)
 
-(Stack, database, frontend og datamodell er ikke lenger åpne — de er bekreftet og
-implementert i fase 1, se arkitektur.md.)
+Disse var åpne; de er nå besluttet slik at fase 2-kodingen kan starte uten å vente på
+flere avklaringer. Alle kan revideres ved behov (loggføres da i beslutningsloggen).
+
+- **Datouttrekk/LLM:** Claude API via offisiell SDK, nyeste kapable modell. Prompt
+  returnerer strukturert per-felt-resultat (felt, tolket verdi, kildeutdrag, konfidens)
+  som mappes til `UttrekksBevis`. Rundskrivene er offentlige → ingen personvernsperre.
+- **`DokumentNokkel` og hash:** `Kilde = "regjeringen"`, `DokumentNokkel` = normalisert
+  `r-{nr}-{aar}` utledet fra PDF-URL (unik indeks (`Kilde`,`DokumentNokkel`) finnes
+  allerede). `InnholdHash` = SHA-256 av hentet PDF-tekst. Eldre PDF-URL-variant prøves
+  som fallback i `hent()`.
+- **Mellomtilstand/forsøksteller:** legges som felt på `BehandletDokument` (utvid
+  `BehandletStatus` + et `UttreksForsoek`-tall, evt. `SisteForsoek`-tidspunkt) framfor
+  egen arbeidskø — enklere og gjenbruker den unike indeksen. Tas i EF-migrasjonen
+  `Fase2Innhenting`.
+- **Liveness-spor:** en liten `InnhentingsStatus`-tilstand med separate tidsstempler
+  for `oppdag()` og `hent()`/uttrekk (samme migrasjon).
+- **Bakgrunnsjobb-form:** .NET `BackgroundService`/Worker i web-hosten (delt
+  forretnings-/autoriseringslag), timer-utløst daglig. Egen Azure Functions/container-
+  jobb vurderes kun hvis jobben senere må skaleres uavhengig av web-hosten.
+- **Word-bibliotek:** Open XML SDK (`DocumentFormat.OpenXml`) — ren .NET, ingen
+  Office-avhengighet på serveren.
+
+(Stack, database, frontend og datamodell var allerede bekreftet og implementert i
+fase 1, se arkitektur.md.)
+
+## 9. Krever bekreftelse fra deg/IT (blokkerer ikke kodestart)
+
+- **FINs notatmal (.dotx):** Word-generatoren bygges mot den dokumenterte notatmal-
+  layouten (logo, «Notat»-merke, sidetall; kravdok. 8) og kobles til den ekte .dotx-
+  malfilen når den foreligger. Skaff malfilen fra FIN når den er tilgjengelig.
+- **De fire IT-forholdene** (kravdok. kap. 12): sky-/sikkerhetsgodkjenning,
+  tverrdepartemental Entra-tilgang, attributt→gruppe-mapping, lagring av FIN-interne
+  frister. Dette er utrullingsforutsetninger, ikke kodeoppgaver (se beslutningsloggen).

@@ -4,7 +4,7 @@ Kronologisk. Nyeste øverst. Hver oppføring: dato, beslutning, begrunnelse, kon
 Dette er prosjektets hukommelse mellom økter. Les hele ved start av hver økt.
 
 ## Status nå
-- Aktiv fase: **Fase 1 (fundament) AVSLUTTET 2026-06-18 og PR #1 MERGET til main.** Fase 1-koden ligger nå på `main`. **Fase 2-planlegging foreligger** (`fase2-plan.md` i rot, forankret i fase 1-koden); **fase 2-koding gjenstår** og startes i ny økt.
+- Aktiv fase: **Fase 1 (fundament) AVSLUTTET 2026-06-18 og PR #1 MERGET til main.** Fase 1-koden ligger nå på `main`. **Fase 2-planlegging AVSLUTTET** (`fase2-plan.md` i rot, forankret i fase 1-koden — alle designvalg lukket, kun FINs notatmal-fil og de fire IT-forholdene krever ekstern avklaring; PR #2). **Fase 2-koding gjenstår** og startes i ny økt (krever plan-godkjenning).
 - Sist fullført: Fase 1 steg 1–8 + kodegjennomgang av PR #1 med rettinger. Fem bekreftede funn rettet: (1) EF identitetskonflikt ved redigering som beholder en gruppe, (2) budsjettårsfilter som kollapset, (3) sikkerhet — claims-transformasjonen stripper nå forfalskede rolle-/gruppeclaims, (4) async void rev kretsen ved lastefeil, (5) «i dag» beregnes i norsk tid, ikke UTC. 23/23 tester grønt; Bicep kompilerer.
 - Neste steg (Fase 2 — START HER i ny økt):
   1. Les `CLAUDE.md` + denne loggen + `arkitektur.md` (særlig «Miljøoppsett» — .NET 10 SDK må installeres i ferskt miljø — og «Fase 1 — implementert» for hvor koden bor).
@@ -16,6 +16,11 @@ Dette er prosjektets hukommelse mellom økter. Les hele ved start av hver økt.
 - Driftsherding før produksjon (identifisert i gjennomgangen, utsatt til utrulling): (a) databasemigrering bør kjøres som eget deploy-steg, ikke ved app-oppstart (unngå crash-loop ved utilgjengelig/pauset DB og race ved skalering); (b) SQL-brannmurens «Allow Azure services» (0.0.0.0) er bred for FIN-interne data — vurder strammere nettverksisolering; (c) web-appens managed identity må gis DB-bruker via T-SQL (dokumentert i infra/README); (d) `HttpSynlighetskontekst` er global ISynlighetskontekst-binding — fungerer for dagens kall, men komponenter må bruke Synlighetskontekstkilde i kretsen.
 
 ## Beslutninger
+
+### [2026-06-18] Fase 2-planlegging avsluttet — gjenstående designvalg lukket
+- Beslutning: Lukket de gjenstående åpne designvalgene for fase 2 (se fase2-plan.md kap. 8): Claude API for datouttrekk; `DokumentNokkel` = normalisert `r-{nr}-{aar}` + SHA-256 `InnholdHash`; mellomtilstand/forsøksteller som felt på `BehandletDokument` (ikke egen kø); liveness via en liten `InnhentingsStatus`-tilstand; bakgrunnsjobb som .NET `BackgroundService` i web-hosten; Word via Open XML SDK. Kun FINs notatmal-fil og de fire IT-forholdene krever ekstern avklaring og blokkerer ikke kodestart.
+- Begrunnelse: Fase 2-planleggingen skulle gjøres helt ferdig slik at en ny økt kan gå rett på koding (etter plan-godkjenning) uten flere avklaringsrunder.
+- Konsekvens: Fase 2-koding starter med EF-migrasjonen `Fase2Innhenting` (forsøksteller + liveness-spor), deretter stegene A–L i fase2-plan.md.
 
 ### [2026-06-18] Fase 2-planlegging forankret i fase 1-koden (etter merge av PR #1)
 - Beslutning: Etter at PR #1 (full fase 1) ble merget til main, ble den detaljerte fase 2-planen skrevet om til å være forankret i den faktiske .NET-koden (`fase2-plan.md`): hvert byggesteg er kartlagt til hvor det bor (`backend/kilder`, `backend/jobb`, Application-tjenester, Web/admin), og gjenbruker `Synlighetsfilter`, `FristskrivingTjeneste`-mønsteret og auth-policyene. Designet er innarbeidet i SYSTEMARKITEKTUR.md (3.2, 3.4, 5, ny kap. 9) og BRUKERHISTORIER.md (4.1, 4.2, 4.6, ny 4.12). To modelltillegg er identifisert som nødvendige i fase 2 (krever EF-migrasjon): forsøksteller/mellomtilstand på `BehandletDokument`, og et liveness-spor for «sist vellykkede innhenting».
