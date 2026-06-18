@@ -4,12 +4,17 @@ Kronologisk. Nyeste øverst. Hver oppføring: dato, beslutning, begrunnelse, kon
 Dette er prosjektets hukommelse mellom økter. Les hele ved start av hver økt.
 
 ## Status nå
-- Aktiv fase: Fase 0 → klar for Fase 1. Kontekstapparat, mappestruktur og backend-/database-valg er på plass.
-- Sist fullført: Backend- og database-valg bekreftet (.NET/ASP.NET Core + Azure SQL) og skrevet inn i arkitektur.md. Forut: igangsetting (Del A) og designgjennomgang.
-- Neste steg: Legg fram en Fase 1-plan (fundament) til godkjenning før koding: solution-/prosjektoppsett, datamodell inkl. utvidelsene under, Entra-innlogging, funksjonsroller, server-side synlighetsfiltrering, de tre visningene, grunnleggende Bicep.
-- Åpne spørsmål: De fire IT-forholdene i kravdokumentets kap. 12 (sky-/sikkerhetsgodkjenning, tverrdepartemental Entra-tilgang, attributt→gruppe-mapping, lagring av FIN-interne frister). Frontend-rammeverk, hosting-form (App Service vs. Container Apps) og bakgrunnsjobb-form ennå ikke endelig valgt.
+- Aktiv fase: Fase 1 (fundament) PÅGÅR. Godkjent plan ligger til grunn; bygges på branch claude/eager-bell-7y9tm2 / PR #1.
+- Sist fullført: Fase 1 steg 1–4. (1) .NET 10-solution med lagdelte prosjekter + CI. (2) Komplett EF Core-datamodell + migrasjon + seeding. (3) Sentralt synlighetsfilter + fristtjeneste + 11 tester. (4) Entra-auth, claims-basert rolle/gruppe, brukeroppslag og filtrert minimal-API /api/frister med 4 HTTP-integrasjonstester. 15/15 tester grønt.
+- Neste steg: Fase 1 steg 5–8. (5) Admin manuell innlegging/redigering med synlighetsvalg (POL-regel, validering). (6) De tre visningene + felles filtre + fargekoding + landingsflate. (7) Administrator-innsyn (gruppemerking, «se som rolle», revisjonsliste). (8) infra/main.bicep + deploy-workflow.
+- Åpne spørsmål: De fire IT-forholdene i kravdokumentets kap. 12. Hosting-form (App Service vs. Container Apps) og bakgrunnsjobb-form (Fase 2) ennå ikke endelig valgt. Entra attributt→gruppe-mapping er gjort konfigurerbar (EntraGrupper-seksjon), men konkrete verdier avklares med IT.
 
 ## Beslutninger
+
+### [2026-06-18] Fase 1: Blazor (Interactive Server) + lagdelt .NET-solution
+- Beslutning: Frontend bygges i Blazor Web App med render mode Interactive Server, servert fra samme ASP.NET Core-host som API-et. Solution under backend/ deles i Domain/Application/Infrastructure/Web/Tests. All synlighetshåndheving går gjennom ett Synlighetsfilter; rolle og grupper bæres som claims (satt av en claims-transformasjon fra DB) slik at policyer og synlighetskontekst bygges fra claims. Migrasjoner er SqlServer; tester kjører mot SQLite in-memory + WebApplicationFactory.
+- Begrunnelse: Interactive Server rendrer på server og sender aldri data klienten ikke har rett til — oppfyller det bærende prinsippet uten ekstra klientbeskyttelse. Ett språk/stack for hele teamet. Claims-basert tilgang gir idiomatiske ASP.NET-policyer.
+- Konsekvens: arkitektur.md frontend-rad bekreftet til Blazor. Minimal-API beholdes ved siden av Blazor for å kunne verifisere filtrering på selve JSON-svaret og for framtidige klienter.
 
 ### [2026-06-18] Stack: backend .NET/ASP.NET Core, database Azure SQL
 - Beslutning: Backend-API og bakgrunnsjobb bygges i .NET (LTS) / ASP.NET Core (C#) med EF Core, og databasen er Azure SQL. `frist.synlig_for` modelleres med en koblingstabell (frist ↔ gruppekode). Frontend-rammeverk, hosting-form og bakgrunnsjobb-form er fortsatt åpne.

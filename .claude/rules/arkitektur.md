@@ -9,7 +9,7 @@ Stabil teknisk referanse for prosjektet «Årshjul for budsjettfrister»: stack,
 Rammene er gitt av kravdokumentet (kap. 9) og ligger fast: drift på Azure, infrastruktur som kode i Bicep, innlogging med Entra ID (OpenID Connect), og et skarpt skille mellom frontend, backend-API, database og bakgrunnsjobb. Det konkrete språk-/rammeverksvalget er åpent og bør tas av hensyn til hvem som skal vedlikeholde løsningen internt.
 
 - **Backend-API** (BEKREFTET 2026-06-18): **.NET (LTS) / ASP.NET Core (C#)**, med Entity Framework Core som dataadgang. Samme kjøretid dekker både API og den periodiske bakgrunnsjobben, slik at autorisering og synlighetsfiltrering ligger ett sted. All tilgangskontroll skjer her, aldri i frontend.
-- **Frontend** (bekreftes): serveres fra samme Azure-ledd som API-et. Naturlige kandidater med .NET er Blazor (samme språk/stack, enklest for ett internt team) eller en JS-SPA (React/Angular). GitHub Pages er uegnet til den faktiske appen fordi den ikke kan håndheve tilgang; brukes på sin høyde til en åpen landingsside.
+- **Frontend** (BEKREFTET 2026-06-18): **Blazor Web App med render mode Interactive Server**, servert fra samme ASP.NET Core-host som API-et. UI rendres på server slik at data en bruker ikke har rett til aldri sendes til klienten. GitHub Pages er uegnet til den faktiske appen fordi den ikke kan håndheve tilgang; brukes på sin høyde til en åpen landingsside.
 - **Database** (BEKREFTET 2026-06-18): **Azure SQL**, aksessert via EF Core. `frist.synlig_for` (liste av gruppekoder, se SYSTEMARKITEKTUR.md kap. 3) modelleres relasjonelt med en koblingstabell (frist ↔ gruppekode), slik at server-side synlighetsfiltrering blir en indeksert join.
 - **Bakgrunnsjobb** (bekreftes): foretrukket som en .NET `BackgroundService`/Worker i samme løsning som API-et (delt forretnings- og autoriseringslag), timer-utløst for periodisk oppdagelse. Alternativ: separat timer-utløst Azure Functions/container-jobb.
 - **Datouttrekk** (bekreftes): språkmodell brukes til tolkning av frister i rundskriv der formuleringene varierer (kravdokumentet 4.4). Modell/leverandør og presisjonsgrad besluttes senere; uttrekket må uansett levere strukturert per-felt-resultat med tolket verdi, kildespenn og konfidens (SYSTEMARKITEKTUR.md 3.2). For oppdaterte API-detaljer, se https://docs.claude.com/en/api/overview.
@@ -25,14 +25,16 @@ Rammene er gitt av kravdokumentet (kap. 9) og ligger fast: drift på Azure, infr
 
 ## Mappestruktur
 
-(Fylles ut når stacken er valgt. Foreslått utgangspunkt — juster til valgt rammeverk:)
-
+- `/backend` — .NET-solution `Aarshjul.slnx` med lagdelte prosjekter:
+  - `Aarshjul.Domain` — entiteter, enums, domenelogikk (datopresisjon/sorteringsdag).
+  - `Aarshjul.Application` — applikasjonstjenester, DTO-er, synlighetsfilter, brukerabstraksjoner.
+  - `Aarshjul.Infrastructure` — `AppDbContext`, EF-konfig, migrasjoner, seeding, tjenester.
+  - `Aarshjul.Web` — ASP.NET Core-host: Blazor-komponenter (visninger, adminflater), minimal-API, Entra-auth. Selve app-UI bor her (Interactive Server).
+  - `Aarshjul.Tests` — xUnit (synlighet, datoberegning, HTTP-integrasjon mot SQLite).
+  - `/backend/kilder`, `/backend/jobb` — plassholdere for Fase 2 (Kilde + bakgrunnsjobb).
+- `/frontend` — plassholder for en eventuell åpen landingsside (app-UI bor i web-hosten).
 - `/infra` — Bicep-maler for all Azure-infrastruktur.
-- `/backend` — API, forretningslogikk, autorisering, synlighetsfiltrering.
-- `/backend/kilder` — `Kilde`-grensesnittet og `RegjeringenKilde` (DFØ senere bak samme grensesnitt).
-- `/backend/jobb` — bakgrunnsjobb: oppdagelse, dedup, uttrekk, klassifisering.
-- `/frontend` — de tre visningene, landingsflate, godkjenningskø, administratorflater.
-- `/.github/workflows` — GitHub Actions (Bicep what-if → deploy).
+- `/.github/workflows` — GitHub Actions (`ci.yml`; senere Bicep what-if → deploy).
 - `/.claude/rules` — kontekstfiler: `arkitektur.md`, `beslutningslogg.md`.
 
 ## Kommandoer (kjør disse, ikke gjett)
