@@ -4,12 +4,17 @@ Kronologisk. Nyeste øverst. Hver oppføring: dato, beslutning, begrunnelse, kon
 Dette er prosjektets hukommelse mellom økter. Les hele ved start av hver økt.
 
 ## Status nå
-- Aktiv fase: Fase 1 (fundament) PÅGÅR. Godkjent plan ligger til grunn; bygges på branch claude/eager-bell-7y9tm2 / PR #1.
-- Sist fullført: Fase 1 steg 1–4. (1) .NET 10-solution med lagdelte prosjekter + CI. (2) Komplett EF Core-datamodell + migrasjon + seeding. (3) Sentralt synlighetsfilter + fristtjeneste + 11 tester. (4) Entra-auth, claims-basert rolle/gruppe, brukeroppslag og filtrert minimal-API /api/frister med 4 HTTP-integrasjonstester. 15/15 tester grønt.
-- Neste steg: Fase 1 steg 5–8. (5) Admin manuell innlegging/redigering med synlighetsvalg (POL-regel, validering). (6) De tre visningene + felles filtre + fargekoding + landingsflate. (7) Administrator-innsyn (gruppemerking, «se som rolle», revisjonsliste). (8) infra/main.bicep + deploy-workflow.
-- Åpne spørsmål: De fire IT-forholdene i kravdokumentets kap. 12. Hosting-form (App Service vs. Container Apps) og bakgrunnsjobb-form (Fase 2) ennå ikke endelig valgt. Entra attributt→gruppe-mapping er gjort konfigurerbar (EntraGrupper-seksjon), men konkrete verdier avklares med IT.
+- Aktiv fase: Fase 1 (fundament) — alle åtte byggesteg implementert. Klar for gjennomgang/verifisering i PR #1 før Fase 2.
+- Sist fullført: Fase 1 steg 1–8. Solution + CI; datamodell + migrasjon + seeding; sentralt synlighetsfilter; Entra-auth + filtrert API; admin manuell innlegging m/ validering; de tre visningene m/ felles filter og fargekoding; administrator-innsyn; Bicep (App Service + Azure SQL + Key Vault + App Insights) + deploy-workflow. 20/20 tester grønt; Bicep kompilerer.
+- Neste steg: Verifiser fase 1 (manuelt mot en faktisk DB/Entra-tenant), deretter planlegg Fase 2 (RegjeringenKilde, oppdagelse, dedup, datouttrekk, godkjenningskø, brukerforslag, Word-utskrift, bakgrunnsjobb). Hosting bekreftet som App Service; bakgrunnsjobb-form avklares i Fase 2.
+- Åpne spørsmål: De fire IT-forholdene i kravdokumentets kap. 12. Konkret Entra attributt→gruppe-mapping (mekanismen er konfigurerbar via EntraGrupper-seksjonen; verdier avklares med IT). Lokal/CI-kjøring krever .NET 10 SDK (installeres i miljøet) og en database for integrasjon mot ekte SQL.
 
 ## Beslutninger
+
+### [2026-06-18] Fase 1 fundament implementert (steg 1–8)
+- Beslutning: Bygde hele Fase 1 på .NET 10. Sikkerhetskjernen: ett `Synlighetsfilter` som både Blazor-visningene og minimal-API-et bruker; rolle/grupper bæres som claims satt fra DB via en claims-transformasjon; manuell innlegging validerer at synlighet er valgt (POL kun ved aktivt valg). Tester (20) dekker filtrering på tjeneste- og HTTP-nivå, datoberegning og innleggingsvalidering. Infra som Bicep (App Service Linux + Azure SQL serverless med Entra-only auth + Key Vault RBAC + App Insights); deploy via manuell GitHub Actions-workflow med OIDC.
+- Begrunnelse: Oppfyller fasens hovedkvalitetskrav — synlighet håndheves på server og er verifisert på selve API-svaret. Entra-only SQL og Key Vault unngår lagrede hemmeligheter.
+- Konsekvens: Web-appens managed identity må gis DB-tilgang via T-SQL etter første deploy (dokumentert i infra/README). Hosting-form bekreftet til App Service. Klar for Fase 2.
 
 ### [2026-06-18] Fase 1: Blazor (Interactive Server) + lagdelt .NET-solution
 - Beslutning: Frontend bygges i Blazor Web App med render mode Interactive Server, servert fra samme ASP.NET Core-host som API-et. Solution under backend/ deles i Domain/Application/Infrastructure/Web/Tests. All synlighetshåndheving går gjennom ett Synlighetsfilter; rolle og grupper bæres som claims (satt av en claims-transformasjon fra DB) slik at policyer og synlighetskontekst bygges fra claims. Migrasjoner er SqlServer; tester kjører mot SQLite in-memory + WebApplicationFactory.
