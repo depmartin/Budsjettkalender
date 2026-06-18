@@ -4,12 +4,17 @@ Kronologisk. Nyeste øverst. Hver oppføring: dato, beslutning, begrunnelse, kon
 Dette er prosjektets hukommelse mellom økter. Les hele ved start av hver økt.
 
 ## Status nå
-- Aktiv fase: Fase 0 — design og spesifikasjon (før koding starter)
-- Sist fullført: Designgjennomgang av brukerhistorier og systemarkitektur. BRUKERHISTORIER.md og SYSTEMARKITEKTUR.md er skrevet og bygger på kravdokumentet + avklaringene under.
-- Neste steg: Fase 1 (fundament) — bekreft teknologivalg og skriv arkitektur.md, sett opp datamodell inkl. utvidelsene under, Entra-innlogging og server-side synlighetsfiltrering.
+- Aktiv fase: Fase 0 → klar for Fase 1. Kontekstapparat og mappestruktur er etablert.
+- Sist fullført: Igangsetting (Del A i utviklingsplanen) — CLAUDE.md opprettet, hukommelsesfilene flyttet til `.claude/rules/`, tom mappestruktur (infra, backend, backend/kilder, backend/jobb, frontend, .github/workflows) opprettet med plassholdere, README oppdatert. Forut: designgjennomgang (BRUKERHISTORIER.md, SYSTEMARKITEKTUR.md).
+- Neste steg: Fase 1 (fundament) — bekreft teknologivalg og fyll ut arkitektur.md (stack + kommandoer), sett opp datamodell inkl. utvidelsene under, Entra-innlogging og server-side synlighetsfiltrering.
 - Åpne spørsmål: De fire IT-forholdene i kravdokumentets kap. 12 (sky-/sikkerhetsgodkjenning, tverrdepartemental Entra-tilgang, attributt→gruppe-mapping, lagring av FIN-interne frister). Endelig språk-/rammeverksvalg for stack ikke besluttet.
 
 ## Beslutninger
+
+### [2026-06-18] Kontekstapparat og mappestruktur etablert (igangsetting)
+- Beslutning: Opprettet `CLAUDE.md` i rot og flyttet `beslutningslogg.md` og `arkitektur.md` til `.claude/rules/` slik opplegget (claude-md-opplegg.md) og utviklingsplanens Del A foreskriver. Opprettet tom mappestruktur med plassholder-README-er. Stacken er bevisst IKKE valgt nå.
+- Begrunnelse: Hver Claude Code-økt starter med tomt kontekstvindu; det som overlever ligger på disk. Apparatet må stå før første kodeøkt. Stack-valget tilhører dem som skal vedlikeholde løsningen og loggføres når det tas.
+- Konsekvens: Fremtidige økter laster CLAUDE.md + `.claude/rules/`-filene ved oppstart. Fase 1 starter med å bekrefte stack og fylle ut arkitektur.md.
 
 ### [2026-06-18] Kildelenke på leserflaten
 - Beslutning: Frister fra offentlige rundskriv viser lenke til kildedokumentet for alle som har tilgang til fristen. Lenken arver fristens synlighet. Manuelle og genererte frister viser ingen lenke og intet opphavsmerke på leserflaten.

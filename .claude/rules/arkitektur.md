@@ -1,6 +1,6 @@
 # Arkitektur og kommandoer
 
-Stabil teknisk referanse for prosjektet «Årshjul for budsjettfrister»: stack, mappestruktur og kommandoer. Endres sjelden. Designbeslutningene bak datamodellen står i `beslutningslogg.md`; brukerflate og roller i `BRUKERHISTORIER.md`; full systemarkitektur i `SYSTEMARKITEKTUR.md`.
+Stabil teknisk referanse for prosjektet «Årshjul for budsjettfrister»: stack, mappestruktur og kommandoer. Endres sjelden. Designbeslutningene bak datamodellen står i `beslutningslogg.md`; brukerflate og roller i `../../BRUKERHISTORIER.md`; full systemarkitektur i `../../SYSTEMARKITEKTUR.md`.
 
 > STATUS: UTKAST. Stacken under er en **anbefaling** som skal bekreftes i første økt av fase 1 før kode skrives. Punkter merket «(bekreftes)» er ikke endelig valgt. Når et valg er tatt, oppdater dette dokumentet og loggfør valget med begrunnelse i `beslutningslogg.md`.
 
@@ -48,7 +48,7 @@ Rammene er gitt av kravdokumentet (kap. 9) og ligger fast: drift på Azure, infr
 
 ## Datamodell
 
-- Full spesifikasjon i `SYSTEMARKITEKTUR.md` kap. 3, og kravdokumentet @kravdokument-aarshjul-frister_v2.md kap. 3.
+- Full spesifikasjon i `../../SYSTEMARKITEKTUR.md` kap. 3, og kravdokumentet @../../kravdokument-aarshjul-frister_v2.md kap. 3.
 - Sentrale tabeller: frist, forslag (inkl. endringsforslag), årsmal/gjentaksregel, behandlet dokument, bruker, synlighetsgruppe, varsel.
 - Fem utvidelser utover kravdokumentet (alle loggført 2026-06-18): datopresisjon + avledet sorteringsdag, `avvist`-status, uttrekksbevis per felt på robotforslag, endringsforslag med `endrer_frist_id`, og varselbegrepet.
 
