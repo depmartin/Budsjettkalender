@@ -36,3 +36,81 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+/* === Årshjul-app === */
+:root {
+    --kant: #d8dce3;
+    --tekst: #1b1f24;
+    --dempet: #5b6470;
+    --primaer: #14507d;
+    --flate: #f6f7f9;
+}
+
+body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; color: var(--tekst); background: var(--flate); }
+a { color: var(--primaer); }
+
+.side { max-width: 1000px; margin: 0 auto; padding: 0 1rem 3rem; }
+.topplinje { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid var(--kant); flex-wrap: wrap; }
+.merkenavn { font-weight: 700; text-decoration: none; color: var(--tekst); }
+.hovednav { display: flex; gap: 0.75rem; flex: 1; }
+.hovednav a { text-decoration: none; padding: 0.25rem 0.5rem; border-radius: 4px; }
+.hovednav a.active { background: var(--primaer); color: #fff; }
+.bruker { display: flex; gap: 0.75rem; align-items: center; font-size: 0.9rem; }
+.brukernavn { color: var(--dempet); }
+.innhold { padding-top: 1.25rem; }
+
+.ingress { color: var(--dempet); margin-top: 0; }
+.melding { color: var(--dempet); padding: 1rem 0; }
+.feil { background: #fdeded; border: 1px solid #e0a9a9; color: #8a1f1f; padding: 0.6rem 0.8rem; border-radius: 6px; margin-bottom: 1rem; }
+.hint { color: var(--dempet); display: block; margin-top: 0.25rem; }
+
+.filterpanel { display: flex; gap: 1.5rem; flex-wrap: wrap; background: #fff; border: 1px solid var(--kant); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; }
+.filterpanel fieldset { border: none; margin: 0; padding: 0; }
+.filterpanel legend { font-weight: 600; font-size: 0.85rem; color: var(--dempet); }
+.filtervalg { display: inline-flex; align-items: center; gap: 0.3rem; margin-right: 0.75rem; }
+
+.fristliste { display: flex; flex-direction: column; gap: 0.6rem; }
+.fristkort { background: #fff; border: 1px solid var(--kant); border-left: 5px solid var(--aarfarge, #bbb); border-radius: 8px; padding: 0.7rem 0.9rem; }
+.fristkort-topp { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.fristkort-dato { font-weight: 600; }
+.fristkort-tittel { font-size: 1.05rem; margin-top: 0.2rem; }
+.fristkort-notat { color: var(--dempet); font-size: 0.9rem; margin-top: 0.25rem; }
+.fristkort-grupper { margin-top: 0.4rem; display: flex; gap: 0.3rem; flex-wrap: wrap; }
+
+.merke { font-size: 0.72rem; padding: 0.1rem 0.45rem; border-radius: 999px; background: #eef0f3; color: var(--dempet); }
+.merke-tentativ { background: #fff3cd; color: #856404; }
+.merke-kategori { background: #e7f0f7; color: var(--primaer); }
+.merke-gruppe { background: #e9ecef; color: #333; }
+.merke-pol { background: #f3e1f5; color: #8e24aa; font-weight: 600; }
+
+/* Fargekoding på budsjettår */
+.aar-farge-0 { --aarfarge: #1f77b4; }
+.aar-farge-1 { --aarfarge: #ff7f0e; }
+.aar-farge-2 { --aarfarge: #2ca02c; }
+.aar-farge-3 { --aarfarge: #9467bd; }
+.aar-farge-4 { --aarfarge: #d62728; }
+.aar-farge-5 { --aarfarge: #17becf; }
+
+.maaned { margin-bottom: 1.5rem; }
+.maaned h2 { font-size: 1.1rem; border-bottom: 1px solid var(--kant); padding-bottom: 0.25rem; }
+
+.hjul { background: #fff; border: 1px solid var(--kant); border-left: 6px solid var(--aarfarge, #bbb); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; }
+.hjul-spor { list-style: none; margin: 0; padding: 0; }
+.hjul-spor li { display: flex; gap: 0.6rem; align-items: center; padding: 0.35rem 0; border-bottom: 1px dashed var(--kant); }
+.hjul-dato { min-width: 9rem; color: var(--dempet); }
+.hjul-tittel { flex: 1; }
+
+.admintopp { display: flex; align-items: center; justify-content: space-between; }
+.tabell { width: 100%; border-collapse: collapse; }
+.tabell th, .tabell td { text-align: left; padding: 0.5rem; border-bottom: 1px solid var(--kant); }
+
+.skjema { display: flex; flex-direction: column; gap: 0.8rem; max-width: 640px; }
+.skjema label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.9rem; }
+.skjema input, .skjema select, .skjema textarea { padding: 0.4rem; border: 1px solid var(--kant); border-radius: 6px; font: inherit; }
+.skjemarad { display: flex; gap: 1rem; flex-wrap: wrap; }
+.synlighet { border: 1px solid var(--kant); border-radius: 8px; padding: 0.6rem 0.9rem; }
+.synlighet legend { font-size: 0.85rem; color: var(--dempet); }
+.pol-valg { font-weight: 600; }
+
+.knapp { padding: 0.45rem 1rem; border: 1px solid var(--kant); border-radius: 6px; background: #fff; cursor: pointer; font: inherit; }
+.knapp-primær { background: var(--primaer); color: #fff; border-color: var(--primaer); }

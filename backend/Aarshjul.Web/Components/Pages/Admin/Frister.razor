@@ -1,0 +1,54 @@
+@page "/admin/frister"
+@attribute [Authorize(Policy = Autorisasjon.ErAdministrator)]
+@inject Synlighetskontekstkilde Kontekstkilde
+@inject IFristlesing Lesing
+@inject NavigationManager Nav
+
+<PageTitle>Administrer frister</PageTitle>
+
+<div class="admintopp">
+    <h1>Frister</h1>
+    <button class="knapp knapp-primær" @onclick='() => Nav.NavigateTo("/admin/frist/ny")'>Ny frist</button>
+</div>
+
+@if (!_lastet)
+{
+    <p class="melding">Laster …</p>
+}
+else if (_frister.Count == 0)
+{
+    <p class="melding">Ingen frister registrert ennå.</p>
+}
+else
+{
+    <table class="tabell">
+        <thead>
+            <tr><th>Dato</th><th>Tittel</th><th>Kategori</th><th>Budsjettår</th><th>Synlig for</th><th></th></tr>
+        </thead>
+        <tbody>
+            @foreach (var frist in _frister)
+            {
+                <tr>
+                    <td>@Visningformat.FormatDato(frist)</td>
+                    <td>@frist.Tittel</td>
+                    <td>@Visningformat.KategoriNavn(frist.Kategori)</td>
+                    <td>@frist.Budsjettaar</td>
+                    <td>@string.Join(", ", frist.Synlighet)</td>
+                    <td><a href="@($"/admin/frist/{frist.Id}")">Rediger</a></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IReadOnlyList<FristDto> _frister = [];
+    private bool _lastet;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var ctx = await Kontekstkilde.HentAsync(); // administrator ser alt
+        _frister = await Lesing.HentSynligeAsync(ctx, new FristFilter { InkluderHistorikk = true });
+        _lastet = true;
+    }
+}

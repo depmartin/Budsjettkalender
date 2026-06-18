@@ -1,0 +1,37 @@
+@* Viser én frist. Gruppemerking (synlighet) vises kun når VisGrupper er satt (administrator). *@
+
+<div class="fristkort @Visningformat.FargeklasseForAar(Frist.Budsjettaar)">
+    <div class="fristkort-topp">
+        <span class="fristkort-dato">@Visningformat.FormatDato(Frist)</span>
+        @if (Frist.ErTentativ)
+        {
+            <span class="merke merke-tentativ" title="Datoen er ikke endelig fastsatt">tentativ</span>
+        }
+        <span class="merke merke-aar">Budsjettår @Frist.Budsjettaar</span>
+        <span class="merke merke-kategori">@Visningformat.KategoriNavn(Frist.Kategori)</span>
+    </div>
+
+    <div class="fristkort-tittel">@Frist.Tittel</div>
+
+    @if (!string.IsNullOrWhiteSpace(Frist.Notat))
+    {
+        <div class="fristkort-notat">@Frist.Notat</div>
+    }
+
+    @if (VisGrupper && Frist.Synlighet.Count > 0)
+    {
+        <div class="fristkort-grupper" title="Synlig for disse gruppene">
+            @foreach (var kode in Frist.Synlighet)
+            {
+                <span class="merke merke-gruppe @(kode == "POL" ? "merke-pol" : "")">@kode</span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public FristDto Frist { get; set; } = default!;
+
+    /// <summary>Vis hvilke grupper fristen er delt med (administratorindikator, BRUKERHISTORIER 4.8).</summary>
+    [Parameter] public bool VisGrupper { get; set; }
+}

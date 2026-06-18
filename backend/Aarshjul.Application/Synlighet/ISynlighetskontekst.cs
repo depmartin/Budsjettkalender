@@ -1,3 +1,7 @@
+using System.Security.Claims;
+using Aarshjul.Application.Brukere;
+using Aarshjul.Domain;
+
 namespace Aarshjul.Application.Synlighet;
 
 /// <summary>
@@ -23,4 +27,15 @@ public sealed class Synlighetskontekst(bool serAlt, IReadOnlyCollection<string> 
 
     /// <summary>Kontekst for en enkelt gruppe (brukes av administrators «se som rolle»).</summary>
     public static Synlighetskontekst ForGruppe(string gruppeKode) => new(false, [gruppeKode]);
+
+    /// <summary>
+    /// Bygger konteksten fra den innloggede principalens berikede claims (rolle + grupper).
+    /// Brukes av Blazor-komponenter, der HttpContext ikke er tilgjengelig i den interaktive kretsen.
+    /// </summary>
+    public static Synlighetskontekst FraPrincipal(ClaimsPrincipal principal)
+    {
+        var serAlt = principal.FindFirst(Brukerclaims.Rolle)?.Value == nameof(Funksjonsrolle.Administrator);
+        var grupper = principal.FindAll(Brukerclaims.Gruppe).Select(c => c.Value).ToArray();
+        return new Synlighetskontekst(serAlt, grupper);
+    }
 }

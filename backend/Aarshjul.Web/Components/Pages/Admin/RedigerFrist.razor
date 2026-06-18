@@ -1,0 +1,168 @@
+@page "/admin/frist/ny"
+@page "/admin/frist/{Id:guid}"
+@attribute [Authorize(Policy = Autorisasjon.ErAdministrator)]
+@inject IFristskriving Skriving
+@inject IGruppetjeneste Grupper
+@inject NavigationManager Nav
+
+<PageTitle>@(Id is null ? "Ny frist" : "Rediger frist")</PageTitle>
+
+<h1>@(Id is null ? "Ny frist" : "Rediger frist")</h1>
+
+@if (!_lastet)
+{
+    <p class="melding">Laster …</p>
+}
+else if (_inndata is null)
+{
+    <p class="melding">Fristen finnes ikke.</p>
+}
+else
+{
+    @if (_feil is not null)
+    {
+        <div class="feil">@_feil</div>
+    }
+
+    <form class="skjema" @onsubmit="Lagre" @onsubmit:preventDefault="true">
+        <label>Tittel
+            <input @bind="_inndata.Tittel" />
+        </label>
+
+        <div class="skjemarad">
+            <label>Presisjon
+                <select @bind="_inndata.Datopresisjon">
+                    <option value="@Datopresisjon.Dag">Dag</option>
+                    <option value="@Datopresisjon.Maaned">Måned</option>
+                </select>
+            </label>
+
+            <label>Dato
+                <input type="date" @bind="_inndata.Dato" />
+            </label>
+
+            @if (_inndata.Datopresisjon == Datopresisjon.Maaned)
+            {
+                <label>Kvalifikator
+                    <select @bind="_kvalifikatorValg">
+                        <option value="">(ingen)</option>
+                        <option value="Primo">Primo</option>
+                        <option value="Medio">Medio</option>
+                        <option value="Ultimo">Ultimo</option>
+                    </select>
+                </label>
+            }
+        </div>
+
+        <div class="skjemarad">
+            <label>Budsjettår
+                <input type="number" @bind="_inndata.Budsjettaar" />
+            </label>
+
+            <label>Kategori
+                <select @bind="_inndata.Kategori">
+                    <option value="@Kategori.Budsjett">Budsjett</option>
+                    <option value="@Kategori.Gulbok">Gul bok</option>
+                    <option value="@Kategori.Regnskap">Regnskap</option>
+                </select>
+            </label>
+
+            <label>Løp
+                <input @bind="_inndata.Loep" placeholder="f.eks. rammefordeling" />
+            </label>
+        </div>
+
+        <label>Notat
+            <textarea @bind="_inndata.Notat" rows="2"></textarea>
+        </label>
+
+        <fieldset class="synlighet">
+            <legend>Synlig for (velg minst én – POL settes kun ved aktivt valg)</legend>
+            @foreach (var gruppe in _grupper)
+            {
+                <label class="filtervalg @(gruppe.Kode == "POL" ? "pol-valg" : "")">
+                    <input type="checkbox"
+                           checked="@_inndata.Synlighetskoder.Contains(gruppe.Kode)"
+                           @onchange="e => VekslGruppe(gruppe.Kode, (bool)e.Value!)" />
+                    @gruppe.Navn (@gruppe.Kode)
+                </label>
+            }
+        </fieldset>
+
+        <div class="skjemarad">
+            <button type="submit" class="knapp knapp-primær">Lagre</button>
+            <button type="button" class="knapp" @onclick='() => Nav.NavigateTo("/admin/frister")'>Avbryt</button>
+        </div>
+    </form>
+}
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private FristInndata? _inndata;
+    private IReadOnlyList<GruppeDto> _grupper = [];
+    private string _kvalifikatorValg = "";
+    private string? _feil;
+    private bool _lastet;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _grupper = await Grupper.HentAktiveAsync();
+
+        if (Id is null)
+        {
+            _inndata = new FristInndata();
+        }
+        else
+        {
+            _inndata = await Skriving.HentForRedigeringAsync(Id.Value);
+            if (_inndata?.Datokvalifikator is { } k)
+            {
+                _kvalifikatorValg = k.ToString();
+            }
+        }
+
+        _lastet = true;
+    }
+
+    private void VekslGruppe(string kode, bool på)
+    {
+        if (på)
+        {
+            if (!_inndata!.Synlighetskoder.Contains(kode))
+            {
+                _inndata.Synlighetskoder.Add(kode);
+            }
+        }
+        else
+        {
+            _inndata!.Synlighetskoder.Remove(kode);
+        }
+    }
+
+    private async Task Lagre()
+    {
+        _feil = null;
+        _inndata!.Datokvalifikator =
+            _inndata.Datopresisjon == Datopresisjon.Maaned && !string.IsNullOrEmpty(_kvalifikatorValg)
+                ? Enum.Parse<Datokvalifikator>(_kvalifikatorValg)
+                : null;
+
+        try
+        {
+            if (Id is null)
+            {
+                await Skriving.OpprettAsync(_inndata);
+            }
+            else
+            {
+                await Skriving.OppdaterAsync(Id.Value, _inndata);
+            }
+            Nav.NavigateTo("/admin/frister");
+        }
+        catch (Valideringsfeil f)
+        {
+            _feil = f.Message;
+        }
+    }
+}

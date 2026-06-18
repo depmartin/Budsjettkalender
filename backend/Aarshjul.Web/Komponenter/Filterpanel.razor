@@ -1,0 +1,48 @@
+@* Felles filter for de tre visningene: kategori, budsjettår og historikk. Mutérer Visningstilstand. *@
+@inject Visningstilstand Tilstand
+
+<div class="filterpanel">
+    <fieldset>
+        <legend>Kategori</legend>
+        @foreach (var kategori in AlleKategorier)
+        {
+            <label class="filtervalg">
+                <input type="checkbox"
+                       checked="@Tilstand.Kategorier.Contains(kategori)"
+                       @onchange="e => Tilstand.VekslKategori(kategori, (bool)e.Value!)" />
+                @Visningformat.KategoriNavn(kategori)
+            </label>
+        }
+    </fieldset>
+
+    @if (TilgjengeligeAar is { Count: > 0 })
+    {
+        <fieldset>
+            <legend>Budsjettår</legend>
+            @foreach (var aar in TilgjengeligeAar)
+            {
+                <label class="filtervalg">
+                    <input type="checkbox"
+                           checked="@Tilstand.Budsjettaar.Contains(aar)"
+                           @onchange="e => Tilstand.VekslBudsjettaar(aar, (bool)e.Value!)" />
+                    @aar
+                </label>
+            }
+            <small class="hint">Ingen valgt = alle år</small>
+        </fieldset>
+    }
+
+    <label class="filtervalg">
+        <input type="checkbox"
+               checked="@Tilstand.InkluderHistorikk"
+               @onchange="e => Tilstand.SettHistorikk((bool)e.Value!)" />
+        Vis historikk
+    </label>
+</div>
+
+@code {
+    private static readonly Kategori[] AlleKategorier = [Kategori.Budsjett, Kategori.Gulbok, Kategori.Regnskap];
+
+    /// <summary>Budsjettår som finnes i synlige data (for avhuking).</summary>
+    [Parameter] public IReadOnlyList<int>? TilgjengeligeAar { get; set; }
+}

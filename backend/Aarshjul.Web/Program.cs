@@ -1,12 +1,15 @@
 using Aarshjul.Application.Brukere;
 using Aarshjul.Application.Frister;
+using Aarshjul.Application.Grupper;
 using Aarshjul.Application.Synlighet;
 using Aarshjul.Infrastructure;
 using Aarshjul.Infrastructure.Brukere;
 using Aarshjul.Infrastructure.Frister;
+using Aarshjul.Infrastructure.Grupper;
 using Aarshjul.Web.Api;
 using Aarshjul.Web.Components;
 using Aarshjul.Web.Sikkerhet;
+using Aarshjul.Web.Visning;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.EntityFrameworkCore;
@@ -33,9 +36,13 @@ builder.Services.Configure<StartdataOpsjoner>(builder.Configuration.GetSection(S
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IFristlesing, FristTjeneste>();
+builder.Services.AddScoped<IFristskriving, FristskrivingTjeneste>();
+builder.Services.AddScoped<IGruppetjeneste, Gruppetjeneste>();
 builder.Services.AddScoped<IBrukeroppslag, BrukeroppslagTjeneste>();
 builder.Services.AddScoped<ISynlighetskontekst, HttpSynlighetskontekst>();
 builder.Services.AddScoped<IClaimsTransformation, BrukerClaimsTransformation>();
+builder.Services.AddScoped<Synlighetskontekstkilde>();
+builder.Services.AddScoped<Visningstilstand>();
 
 // --- Autentisering (Entra ID). Utelates i testmiljø; testene injiserer egen ordning. ---
 if (!erTesting)

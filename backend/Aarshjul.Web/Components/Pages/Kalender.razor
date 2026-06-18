@@ -1,0 +1,48 @@
+@page "/kalender"
+@attribute [Authorize]
+@inherits Visningsside
+
+<PageTitle>Kalender</PageTitle>
+
+<h1>Kalender</h1>
+<p class="ingress">Frister gruppert per måned.</p>
+
+<Filterpanel TilgjengeligeAar="TilgjengeligeAar" />
+
+@if (!Lastet)
+{
+    <p class="melding">Laster …</p>
+}
+else if (Frister.Count == 0)
+{
+    <p class="melding">Ingen frister i utvalget ditt.</p>
+}
+else
+{
+    @foreach (var maaned in Frister.GroupBy(f => new { f.Sorteringsdag.Year, f.Sorteringsdag.Month })
+                                   .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month))
+    {
+        <section class="maaned">
+            <h2>@MaanedOverskrift(maaned.Key.Year, maaned.Key.Month)</h2>
+            <div class="fristliste">
+                @foreach (var frist in maaned.OrderBy(f => f.Sorteringsdag))
+                {
+                    <Fristkort Frist="frist" VisGrupper="ErAdministrator" />
+                }
+            </div>
+        </section>
+    }
+}
+
+@code {
+    private static readonly string[] Maaneder =
+    [
+        "Januar", "Februar", "Mars", "April", "Mai", "Juni",
+        "Juli", "August", "September", "Oktober", "November", "Desember"
+    ];
+
+    private static string MaanedOverskrift(int aar, int maaned) => $"{Maaneder[maaned - 1]} {aar}";
+
+    protected override Task<IReadOnlyList<FristDto>> HentAsync(ISynlighetskontekst ctx)
+        => Lesing.HentSynligeAsync(ctx, Tilstand.TilFilter());
+}
