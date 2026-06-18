@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-test:
+    name: Bygg og test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sett opp .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Gjenopprett pakker
+        run: dotnet restore backend/Aarshjul.slnx
+
+      - name: Bygg
+        run: dotnet build backend/Aarshjul.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test backend/Aarshjul.slnx --configuration Release --no-build --verbosity normal
