@@ -21,6 +21,7 @@ public abstract class Visningsside : ComponentBase, IDisposable
     protected IReadOnlyList<int> TilgjengeligeAar { get; private set; } = [];
     protected bool ErAdministrator { get; private set; }
     protected bool Lastet { get; private set; }
+    protected string? Lastefeil { get; private set; }
 
     /// <summary>Henter fristene for denne visningen, gitt brukerens synlighetskontekst.</summary>
     protected abstract Task<IReadOnlyList<FristDto>> HentAsync(ISynlighetskontekst ctx);
@@ -29,14 +30,26 @@ public abstract class Visningsside : ComponentBase, IDisposable
 
     protected override Task OnInitializedAsync() => LastInnAsync();
 
+    // async void er nødvendig for et synkront event; feil fanges inne i LastInnAsync slik at
+    // de aldri propagerer ut hit og river SignalR-kretsen.
     private async void VedEndret() => await InvokeAsync(LastInnAsync);
 
     protected async Task LastInnAsync()
     {
-        var ctx = await Kontekstkilde.HentAsync();
-        ErAdministrator = ctx.SerAlt;
-        Frister = await HentAsync(ctx);
-        TilgjengeligeAar = Frister.Select(f => f.Budsjettaar).Distinct().OrderBy(a => a).ToList();
+        try
+        {
+            var ctx = await Kontekstkilde.HentAsync();
+            ErAdministrator = ctx.SerAlt;
+            Frister = await HentAsync(ctx);
+            // Tilgjengelige år hentes uavhengig av årsvalget, så filteret ikke kollapser.
+            TilgjengeligeAar = await Lesing.HentTilgjengeligeBudsjettaarAsync(ctx, Tilstand.InkluderHistorikk);
+            Lastefeil = null;
+        }
+        catch (Exception)
+        {
+            Frister = [];
+            Lastefeil = "Kunne ikke laste frister akkurat nå. Prøv igjen.";
+        }
         Lastet = true;
         StateHasChanged();
     }

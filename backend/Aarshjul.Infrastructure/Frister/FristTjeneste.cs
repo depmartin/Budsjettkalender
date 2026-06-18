@@ -36,6 +36,27 @@ public class FristTjeneste(AppDbContext db, TimeProvider klokke) : IFristlesing
             .ToList();
     }
 
+    public async Task<IReadOnlyList<int>> HentTilgjengeligeBudsjettaarAsync(
+        ISynlighetskontekst ctx, bool inkluderHistorikk, CancellationToken ct = default)
+    {
+        var idag = Idag();
+        var spørring = db.Frister
+            .AsNoTracking()
+            .Where(f => f.Status == FristStatus.Godkjent)
+            .FiltrerSynlige(ctx);
+
+        if (!inkluderHistorikk)
+        {
+            spørring = spørring.Where(f => f.Sorteringsdag >= idag);
+        }
+
+        return await spørring
+            .Select(f => f.Budsjettaar)
+            .Distinct()
+            .OrderBy(a => a)
+            .ToListAsync(ct);
+    }
+
     /// <summary>Synlige, godkjente frister som matcher kategori-/budsjettårsfilter og historikkregel.</summary>
     private IQueryable<Frist> GrunnSpørring(ISynlighetskontekst ctx, FristFilter filter, DateOnly idag, bool kunFramover = false)
     {
@@ -82,5 +103,5 @@ public class FristTjeneste(AppDbContext db, TimeProvider klokke) : IFristlesing
                 f.Synlighet.Select(s => s.GruppeKode).ToList()))
             .ToListAsync(ct);
 
-    private DateOnly Idag() => DateOnly.FromDateTime(klokke.GetUtcNow().UtcDateTime);
+    private DateOnly Idag() => Datohjelp.Idag(klokke);
 }

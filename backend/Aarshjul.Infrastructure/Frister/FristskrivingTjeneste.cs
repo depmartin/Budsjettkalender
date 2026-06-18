@@ -45,8 +45,15 @@ public class FristskrivingTjeneste(AppDbContext db) : IFristskriving
 
         SettFelter(frist, inndata);
 
-        frist.Synlighet.Clear();
-        foreach (var kode in koder)
+        // Diff framfor «clear + re-add»: å legge til en kode som allerede er tracket gir
+        // EF en identitetskonflikt. Fjern kun de som utgår, legg til kun de som er nye.
+        var ønsket = koder.ToHashSet();
+        foreach (var utgår in frist.Synlighet.Where(s => !ønsket.Contains(s.GruppeKode)).ToList())
+        {
+            frist.Synlighet.Remove(utgår);
+        }
+        var finnes = frist.Synlighet.Select(s => s.GruppeKode).ToHashSet();
+        foreach (var kode in koder.Where(k => !finnes.Contains(k)))
         {
             frist.Synlighet.Add(new FristSynlighet { FristId = id, GruppeKode = kode });
         }

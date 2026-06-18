@@ -1,5 +1,6 @@
 using Aarshjul.Application;
 using Aarshjul.Application.Frister;
+using Aarshjul.Application.Synlighet;
 using Aarshjul.Domain;
 using Aarshjul.Infrastructure;
 using Aarshjul.Infrastructure.Frister;
@@ -68,6 +69,37 @@ public class FristskrivingTester : IDisposable
     public async Task Ukjent_gruppekode_avvises()
     {
         await Assert.ThrowsAsync<Valideringsfeil>(() => Tjeneste().OpprettAsync(GyldigInndata("FINNES-IKKE")));
+    }
+
+    [Fact]
+    public async Task Oppdatering_som_beholder_en_eksisterende_gruppe_kaster_ikke()
+    {
+        // Vanligste redigering: behold FA, bytt FAG -> POL. Tidligere «clear + re-add» kastet her.
+        var id = await Tjeneste().OpprettAsync(GyldigInndata("FA", "FAG"));
+
+        await Tjeneste().OppdaterAsync(id, GyldigInndata("FA", "POL"));
+
+        var frist = await _t.Db.Frister.Include(f => f.Synlighet).SingleAsync(f => f.Id == id);
+        Assert.Equal(["FA", "POL"], frist.Synlighet.Select(s => s.GruppeKode).OrderBy(k => k));
+    }
+
+    [Fact]
+    public async Task Tilgjengelige_budsjettaar_paavirkes_ikke_av_aarsfilter()
+    {
+        await Tjeneste().OpprettAsync(MedAar(2027, "FA"));
+        await Tjeneste().OpprettAsync(MedAar(2028, "FA"));
+
+        var lesing = new FristTjeneste(_t.Db, new FastKlokke(new DateOnly(2026, 1, 1)));
+        var aar = await lesing.HentTilgjengeligeBudsjettaarAsync(new Synlighetskontekst(false, ["FA"]), inkluderHistorikk: true);
+
+        Assert.Equal([2027, 2028], aar);
+    }
+
+    private static FristInndata MedAar(int aar, params string[] koder)
+    {
+        var inndata = GyldigInndata(koder);
+        inndata.Budsjettaar = aar;
+        return inndata;
     }
 
     [Fact]

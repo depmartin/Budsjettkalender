@@ -14,6 +14,10 @@
 {
     <p class="melding">Laster …</p>
 }
+else if (Lastefeil is not null)
+{
+    <div class="feil">@Lastefeil</div>
+}
 else if (Frister.Count == 0)
 {
     <p class="melding">Ingen kommende frister i utvalget ditt.</p>
@@ -31,7 +35,7 @@ else
 @code {
     protected override Task<IReadOnlyList<FristDto>> HentAsync(ISynlighetskontekst ctx)
     {
-        var idag = DateOnly.FromDateTime(Klokke.GetUtcNow().UtcDateTime);
+        var idag = Datohjelp.Idag(Klokke);
         return Lesing.HentLandingsutvalgAsync(ctx, idag, Tilstand.TilFilter());
     }
 }

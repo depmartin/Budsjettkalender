@@ -16,4 +16,10 @@ public interface IFristlesing
     /// fem førstkommende», rullerende fra <paramref name="fraOgMed"/>, filtrert på synlighet.
     /// </summary>
     Task<IReadOnlyList<FristDto>> HentLandingsutvalgAsync(ISynlighetskontekst ctx, DateOnly fraOgMed, FristFilter filter, CancellationToken ct = default);
+
+    /// <summary>
+    /// Budsjettårene brukeren har synlige frister for. Uavhengig av budsjettårsvalget i
+    /// filteret, slik at årsfilteret ikke kollapser når ett år er valgt.
+    /// </summary>
+    Task<IReadOnlyList<int>> HentTilgjengeligeBudsjettaarAsync(ISynlighetskontekst ctx, bool inkluderHistorikk, CancellationToken ct = default);
 }

@@ -44,6 +44,10 @@ public class TestApplikasjon : WebApplicationFactory<Program>
             services.AddDbContext<AppDbContext>((sp, o) =>
                 o.UseSqlite(sp.GetRequiredService<SqliteConnection>()));
 
+            // Test-autentiseringen injiserer rolle/grupper direkte som claims; fjern
+            // claims-transformasjonen (dekket av egen enhetstest) så den ikke overstyrer dem.
+            services.RemoveAll<IClaimsTransformation>();
+
             services.AddAuthentication("Test")
                 .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("Test", _ => { });
             services.Configure<AuthenticationOptions>(o =>

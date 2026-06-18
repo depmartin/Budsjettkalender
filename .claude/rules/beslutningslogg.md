@@ -5,9 +5,10 @@ Dette er prosjektets hukommelse mellom økter. Les hele ved start av hver økt.
 
 ## Status nå
 - Aktiv fase: Fase 1 (fundament) — alle åtte byggesteg implementert. Klar for gjennomgang/verifisering i PR #1 før Fase 2.
-- Sist fullført: Fase 1 steg 1–8. Solution + CI; datamodell + migrasjon + seeding; sentralt synlighetsfilter; Entra-auth + filtrert API; admin manuell innlegging m/ validering; de tre visningene m/ felles filter og fargekoding; administrator-innsyn; Bicep (App Service + Azure SQL + Key Vault + App Insights) + deploy-workflow. 20/20 tester grønt; Bicep kompilerer.
+- Sist fullført: Fase 1 steg 1–8 + kodegjennomgang av PR #1 med rettinger. Fem bekreftede funn rettet: (1) EF identitetskonflikt ved redigering som beholder en gruppe, (2) budsjettårsfilter som kollapset, (3) sikkerhet — claims-transformasjonen stripper nå forfalskede rolle-/gruppeclaims, (4) async void rev kretsen ved lastefeil, (5) «i dag» beregnes i norsk tid, ikke UTC. 23/23 tester grønt; Bicep kompilerer.
 - Neste steg: Verifiser fase 1 (manuelt mot en faktisk DB/Entra-tenant), deretter planlegg Fase 2 (RegjeringenKilde, oppdagelse, dedup, datouttrekk, godkjenningskø, brukerforslag, Word-utskrift, bakgrunnsjobb). Hosting bekreftet som App Service; bakgrunnsjobb-form avklares i Fase 2.
 - Åpne spørsmål: De fire IT-forholdene i kravdokumentets kap. 12. Konkret Entra attributt→gruppe-mapping (mekanismen er konfigurerbar via EntraGrupper-seksjonen; verdier avklares med IT). Lokal/CI-kjøring krever .NET 10 SDK (installeres i miljøet) og en database for integrasjon mot ekte SQL.
+- Driftsherding før produksjon (identifisert i gjennomgangen, utsatt til utrulling): (a) databasemigrering bør kjøres som eget deploy-steg, ikke ved app-oppstart (unngå crash-loop ved utilgjengelig/pauset DB og race ved skalering); (b) SQL-brannmurens «Allow Azure services» (0.0.0.0) er bred for FIN-interne data — vurder strammere nettverksisolering; (c) web-appens managed identity må gis DB-bruker via T-SQL (dokumentert i infra/README); (d) `HttpSynlighetskontekst` er global ISynlighetskontekst-binding — fungerer for dagens kall, men komponenter må bruke Synlighetskontekstkilde i kretsen.
 
 ## Beslutninger
 

@@ -18,11 +18,11 @@ public class BrukerClaimsTransformation(IBrukeroppslag oppslag) : IClaimsTransfo
             return principal;
         }
 
-        // Allerede beriket i denne forespørselen?
-        if (principal.HasClaim(c => c.Type == Brukerclaims.Rolle))
-        {
-            return principal;
-        }
+        // Sikkerhet: fjern ALLE innkommende rolle-/gruppeclaims før berikelse, slik at et
+        // token som (i et fremmed/gjeste-tenant) inneholder en forfalsket «aarshjul:rolle»
+        // eller «aarshjul:gruppe» aldri kan gi admin- eller gruppetilgang. Disse claimene
+        // settes utelukkende fra databasen her.
+        FjernEksisterende(principal);
 
         var bruker = await oppslag.HentEllerOpprettAsync(principal);
 
@@ -35,5 +35,19 @@ public class BrukerClaimsTransformation(IBrukeroppslag oppslag) : IClaimsTransfo
 
         principal.AddIdentity(identitet);
         return principal;
+    }
+
+    private static void FjernEksisterende(ClaimsPrincipal principal)
+    {
+        foreach (var identitet in principal.Identities)
+        {
+            var berikede = identitet.FindAll(Brukerclaims.Rolle)
+                .Concat(identitet.FindAll(Brukerclaims.Gruppe))
+                .ToList();
+            foreach (var claim in berikede)
+            {
+                identitet.RemoveClaim(claim);
+            }
+        }
     }
 }
