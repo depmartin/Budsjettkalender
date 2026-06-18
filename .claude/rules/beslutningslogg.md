@@ -4,12 +4,43 @@ Kronologisk. Nyeste øverst. Hver oppføring: dato, beslutning, begrunnelse, kon
 Dette er prosjektets hukommelse mellom økter. Les hele ved start av hver økt.
 
 ## Status nå
-- Aktiv fase: Fase 0 — design og spesifikasjon (før koding starter)
-- Sist fullført: Designgjennomgang av brukerhistorier og systemarkitektur. BRUKERHISTORIER.md og SYSTEMARKITEKTUR.md er skrevet og bygger på kravdokumentet + avklaringene under.
-- Neste steg: Fase 1 (fundament) — bekreft teknologivalg og skriv arkitektur.md, sett opp datamodell inkl. utvidelsene under, Entra-innlogging og server-side synlighetsfiltrering.
-- Åpne spørsmål: De fire IT-forholdene i kravdokumentets kap. 12 (sky-/sikkerhetsgodkjenning, tverrdepartemental Entra-tilgang, attributt→gruppe-mapping, lagring av FIN-interne frister). Endelig språk-/rammeverksvalg for stack ikke besluttet.
+- Aktiv fase: **Fase 1 (fundament) AVSLUTTET 2026-06-18.** Alt arbeid ligger på branch `claude/eager-bell-7y9tm2` / **PR #1** (CI grønt). PR-en er klar for review/merge. **Fase 2 startes i ny økt.**
+- Sist fullført: Fase 1 steg 1–8 + kodegjennomgang av PR #1 med rettinger. Fem bekreftede funn rettet: (1) EF identitetskonflikt ved redigering som beholder en gruppe, (2) budsjettårsfilter som kollapset, (3) sikkerhet — claims-transformasjonen stripper nå forfalskede rolle-/gruppeclaims, (4) async void rev kretsen ved lastefeil, (5) «i dag» beregnes i norsk tid, ikke UTC. 23/23 tester grønt; Bicep kompilerer.
+- Neste steg (Fase 2 — START HER i ny økt):
+  1. Les `CLAUDE.md` + denne loggen + `arkitektur.md` (særlig «Miljøoppsett» — .NET 10 SDK må installeres i ferskt miljø — og «Fase 1 — implementert» for hvor koden bor).
+  2. Bekreft at `dotnet test backend/Aarshjul.slnx` er grønt før ny kode.
+  3. Legg fram en Fase 2-plan til godkjenning (regelen om plan-før-kode gjelder).
+  4. Fase 2-leveranser: `Kilde`-grensesnitt (`oppdag()`/`hent()`) + `RegjeringenKilde` i `backend/kilder`; oppdagelse + dedup mot `BehandletDokument`; totrinns filtrering (nummerserie + tittelmønster); datouttrekk (språkmodell, per-felt-bevis); **godkjenningskø** (gjenbruk `Synlighetsfilter`; publisering av godkjent forslag via samme mønster som `FristskrivingTjeneste`); brukerforslag (bidragsyter) + `Varsel`; Word-utskrift per gruppe/periode; bakgrunnsjobb i `backend/jobb` (form avklares). Tabellene Forslag/UttrekksBevis/BehandletDokument/Gjentaksregel/Varsel finnes allerede i modellen.
+  5. Ekte ende-til-ende-verifisering av Fase 1 (mot reell Azure SQL/Entra-tenant) er en utrullingsoppgave, ikke en kodeoppgave.
+- Åpne spørsmål: De fire IT-forholdene i kravdokumentets kap. 12. Konkret Entra attributt→gruppe-mapping (mekanismen er konfigurerbar via EntraGrupper-seksjonen; verdier avklares med IT). Lokal/CI-kjøring krever .NET 10 SDK (installeres i miljøet) og en database for integrasjon mot ekte SQL.
+- Driftsherding før produksjon (identifisert i gjennomgangen, utsatt til utrulling): (a) databasemigrering bør kjøres som eget deploy-steg, ikke ved app-oppstart (unngå crash-loop ved utilgjengelig/pauset DB og race ved skalering); (b) SQL-brannmurens «Allow Azure services» (0.0.0.0) er bred for FIN-interne data — vurder strammere nettverksisolering; (c) web-appens managed identity må gis DB-bruker via T-SQL (dokumentert i infra/README); (d) `HttpSynlighetskontekst` er global ISynlighetskontekst-binding — fungerer for dagens kall, men komponenter må bruke Synlighetskontekstkilde i kretsen.
 
 ## Beslutninger
+
+### [2026-06-18] Fase 1 avsluttet og kodegjennomgang gjennomført
+- Beslutning: Avsluttet Fase 1 etter en strukturert kodegjennomgang av PR #1 (fire fokuserte review-agenter: sikkerhet/auth, datalag, Blazor, infra). Fem bekreftede feil ble rettet og dekket av nye regresjonstester (se Status nå). Driftsherding (migrering ved oppstart, SQL-brannmurens bredde, MI-DB-bruker, default ISynlighetskontekst-binding) er bevisst utsatt til utrullingsfasen og listet under «Åpne spørsmål». Stack-anbefalingene som gjensto er nå bekreftet i praksis: hosting = Azure App Service (Linux, .NET 10).
+- Begrunnelse: Fasens hovedkvalitetskrav (server-side synlighet verifisert på API-svaret) er oppfylt og testdekket. Resten er drift som hører til utrulling, ikke fundamentkoden.
+- Konsekvens: PR #1 er klar for review/merge. Fase 2 starter i ny økt fra punktene i «Status nå»; arkitektur.md har miljøoppsett og kart over hvor Fase 1-koden bor.
+
+### [2026-06-18] Fase 1 fundament implementert (steg 1–8)
+- Beslutning: Bygde hele Fase 1 på .NET 10. Sikkerhetskjernen: ett `Synlighetsfilter` som både Blazor-visningene og minimal-API-et bruker; rolle/grupper bæres som claims satt fra DB via en claims-transformasjon; manuell innlegging validerer at synlighet er valgt (POL kun ved aktivt valg). Tester (20) dekker filtrering på tjeneste- og HTTP-nivå, datoberegning og innleggingsvalidering. Infra som Bicep (App Service Linux + Azure SQL serverless med Entra-only auth + Key Vault RBAC + App Insights); deploy via manuell GitHub Actions-workflow med OIDC.
+- Begrunnelse: Oppfyller fasens hovedkvalitetskrav — synlighet håndheves på server og er verifisert på selve API-svaret. Entra-only SQL og Key Vault unngår lagrede hemmeligheter.
+- Konsekvens: Web-appens managed identity må gis DB-tilgang via T-SQL etter første deploy (dokumentert i infra/README). Hosting-form bekreftet til App Service. Klar for Fase 2.
+
+### [2026-06-18] Fase 1: Blazor (Interactive Server) + lagdelt .NET-solution
+- Beslutning: Frontend bygges i Blazor Web App med render mode Interactive Server, servert fra samme ASP.NET Core-host som API-et. Solution under backend/ deles i Domain/Application/Infrastructure/Web/Tests. All synlighetshåndheving går gjennom ett Synlighetsfilter; rolle og grupper bæres som claims (satt av en claims-transformasjon fra DB) slik at policyer og synlighetskontekst bygges fra claims. Migrasjoner er SqlServer; tester kjører mot SQLite in-memory + WebApplicationFactory.
+- Begrunnelse: Interactive Server rendrer på server og sender aldri data klienten ikke har rett til — oppfyller det bærende prinsippet uten ekstra klientbeskyttelse. Ett språk/stack for hele teamet. Claims-basert tilgang gir idiomatiske ASP.NET-policyer.
+- Konsekvens: arkitektur.md frontend-rad bekreftet til Blazor. Minimal-API beholdes ved siden av Blazor for å kunne verifisere filtrering på selve JSON-svaret og for framtidige klienter.
+
+### [2026-06-18] Stack: backend .NET/ASP.NET Core, database Azure SQL
+- Beslutning: Backend-API og bakgrunnsjobb bygges i .NET (LTS) / ASP.NET Core (C#) med EF Core, og databasen er Azure SQL. `frist.synlig_for` modelleres med en koblingstabell (frist ↔ gruppekode). Frontend-rammeverk, hosting-form og bakgrunnsjobb-form er fortsatt åpne.
+- Begrunnelse: .NET gir tett, godt støttet integrasjon mot Entra ID og Azure og er lett å vedlikeholde internt; Azure SQL passer tett sammen med .NET/EF Core. Ett rammeverk dekker API + jobb, slik at autorisering og synlighetsfiltrering ligger ett sted.
+- Konsekvens: arkitektur.md oppdatert med stack og .NET-kommandoer. Fase 1 starter med solution-oppsett og EF Core-datamodell. Server-side synlighetsfiltrering blir en indeksert join mot koblingstabellen.
+
+### [2026-06-18] Kontekstapparat og mappestruktur etablert (igangsetting)
+- Beslutning: Opprettet `CLAUDE.md` i rot og flyttet `beslutningslogg.md` og `arkitektur.md` til `.claude/rules/` slik opplegget (claude-md-opplegg.md) og utviklingsplanens Del A foreskriver. Opprettet tom mappestruktur med plassholder-README-er. Stacken er bevisst IKKE valgt nå.
+- Begrunnelse: Hver Claude Code-økt starter med tomt kontekstvindu; det som overlever ligger på disk. Apparatet må stå før første kodeøkt. Stack-valget tilhører dem som skal vedlikeholde løsningen og loggføres når det tas.
+- Konsekvens: Fremtidige økter laster CLAUDE.md + `.claude/rules/`-filene ved oppstart. Fase 1 starter med å bekrefte stack og fylle ut arkitektur.md.
 
 ### [2026-06-18] Kildelenke på leserflaten
 - Beslutning: Frister fra offentlige rundskriv viser lenke til kildedokumentet for alle som har tilgang til fristen. Lenken arver fristens synlighet. Manuelle og genererte frister viser ingen lenke og intet opphavsmerke på leserflaten.

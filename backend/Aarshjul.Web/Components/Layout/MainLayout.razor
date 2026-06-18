@@ -1,0 +1,37 @@
+@inherits LayoutComponentBase
+
+<div class="side">
+    <header class="topplinje">
+        <a class="merkenavn" href="/">Årshjul for budsjettfrister</a>
+        <nav class="hovednav">
+            <NavLink href="/" Match="NavLinkMatch.All">Nå</NavLink>
+            <NavLink href="/kalender">Kalender</NavLink>
+            <NavLink href="/aarshjul">Årshjul</NavLink>
+            <AuthorizeView Policy="@Autorisasjon.ErAdministrator">
+                <NavLink href="/admin/frister">Frister</NavLink>
+                <NavLink href="/admin/innsyn">Innsyn</NavLink>
+            </AuthorizeView>
+        </nav>
+        <div class="bruker">
+            <AuthorizeView>
+                <Authorized>
+                    <span class="brukernavn">@context.User.Identity?.Name</span>
+                    <a href="MicrosoftIdentity/Account/SignOut">Logg ut</a>
+                </Authorized>
+                <NotAuthorized>
+                    <a href="MicrosoftIdentity/Account/SignIn">Logg inn</a>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+    </header>
+
+    <main class="innhold">
+        @Body
+    </main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    En uventet feil oppstod.
+    <a href="." class="reload">Last på nytt</a>
+    <span class="dismiss">🗙</span>
+</div>

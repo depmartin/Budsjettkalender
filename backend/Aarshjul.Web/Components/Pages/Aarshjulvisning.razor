@@ -1,0 +1,51 @@
+@page "/aarshjul"
+@attribute [Authorize]
+@inherits Visningsside
+
+<PageTitle>Årshjul</PageTitle>
+
+<h1>Årshjul</h1>
+<p class="ingress">Ett budsjettløp i sin helhet, kronologisk gjennom syklusen.</p>
+
+<Filterpanel TilgjengeligeAar="TilgjengeligeAar" />
+
+@if (!Lastet)
+{
+    <p class="melding">Laster …</p>
+}
+else if (Lastefeil is not null)
+{
+    <div class="feil">@Lastefeil</div>
+}
+else if (Frister.Count == 0)
+{
+    <p class="melding">Ingen frister i utvalget ditt.</p>
+}
+else
+{
+    @foreach (var løp in Frister.GroupBy(f => f.Budsjettaar).OrderBy(g => g.Key))
+    {
+        <section class="hjul @Visningformat.FargeklasseForAar(løp.Key)">
+            <h2>Budsjettår @løp.Key</h2>
+            <ol class="hjul-spor">
+                @foreach (var frist in løp.OrderBy(f => f.Sorteringsdag))
+                {
+                    <li>
+                        <span class="hjul-dato">@Visningformat.FormatDato(frist)</span>
+                        <span class="hjul-tittel">@frist.Tittel</span>
+                        <span class="merke merke-kategori">@Visningformat.KategoriNavn(frist.Kategori)</span>
+                        @if (frist.ErTentativ)
+                        {
+                            <span class="merke merke-tentativ">tentativ</span>
+                        }
+                    </li>
+                }
+            </ol>
+        </section>
+    }
+}
+
+@code {
+    protected override Task<IReadOnlyList<FristDto>> HentAsync(ISynlighetskontekst ctx)
+        => Lesing.HentSynligeAsync(ctx, Tilstand.TilFilter());
+}

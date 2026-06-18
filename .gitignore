@@ -1,0 +1,26 @@
+# .NET build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+
+# Test results
+[Tt]est[Rr]esults/
+*.trx
+*.coverage
+coverage/
+
+# Rider/VS
+.idea/
+.vs/
+
+# Local config / secrets (bruk Key Vault / user-secrets, aldri commit)
+appsettings.*.local.json
+secrets.json
+*.env
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,41 @@
+@page "/"
+@attribute [Authorize]
+@inherits Visningsside
+@inject TimeProvider Klokke
+
+<PageTitle>Frister – hva kommer nå</PageTitle>
+
+<h1>Hva kommer nå</h1>
+<p class="ingress">De fristene som er nær i tid og angår deg.</p>
+
+<Filterpanel TilgjengeligeAar="TilgjengeligeAar" />
+
+@if (!Lastet)
+{
+    <p class="melding">Laster …</p>
+}
+else if (Lastefeil is not null)
+{
+    <div class="feil">@Lastefeil</div>
+}
+else if (Frister.Count == 0)
+{
+    <p class="melding">Ingen kommende frister i utvalget ditt.</p>
+}
+else
+{
+    <div class="fristliste">
+        @foreach (var frist in Frister)
+        {
+            <Fristkort Frist="frist" VisGrupper="ErAdministrator" />
+        }
+    </div>
+}
+
+@code {
+    protected override Task<IReadOnlyList<FristDto>> HentAsync(ISynlighetskontekst ctx)
+    {
+        var idag = Datohjelp.Idag(Klokke);
+        return Lesing.HentLandingsutvalgAsync(ctx, idag, Tilstand.TilFilter());
+    }
+}

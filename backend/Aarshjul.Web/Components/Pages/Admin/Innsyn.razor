@@ -1,0 +1,70 @@
+@page "/admin/innsyn"
+@attribute [Authorize(Policy = Autorisasjon.ErAdministrator)]
+@inject IGruppetjeneste Grupper
+@inject IFristlesing Lesing
+
+<PageTitle>Innsyn – hvem ser hva</PageTitle>
+
+<h1>Innsyn</h1>
+<p class="ingress">
+    Velg en gruppe for å se nøyaktig de fristene gruppen har tilgang til (som «se som rolle»).
+    De øvrige gruppene fristen er delt med vises ved siden av – nyttig for å kontrollere hva som er delt med POL.
+</p>
+
+<label>Gruppe
+    <select @bind="_valgtKode" @bind:after="LastInnAsync">
+        <option value="">(velg gruppe)</option>
+        @foreach (var gruppe in _grupper)
+        {
+            <option value="@gruppe.Kode">@gruppe.Navn (@gruppe.Kode)</option>
+        }
+    </select>
+</label>
+
+@if (string.IsNullOrEmpty(_valgtKode))
+{
+    <p class="melding">Ingen gruppe valgt.</p>
+}
+else if (!_lastet)
+{
+    <p class="melding">Laster …</p>
+}
+else if (_frister.Count == 0)
+{
+    <p class="melding">Ingen frister er delt med @_valgtKode.</p>
+}
+else
+{
+    <p class="ingress">@_frister.Count frist(er) delt med <strong>@_valgtKode</strong>:</p>
+    <div class="fristliste">
+        @foreach (var frist in _frister)
+        {
+            <Fristkort Frist="frist" VisGrupper="true" />
+        }
+    </div>
+}
+
+@code {
+    private IReadOnlyList<GruppeDto> _grupper = [];
+    private IReadOnlyList<FristDto> _frister = [];
+    private string _valgtKode = "";
+    private bool _lastet;
+
+    protected override async Task OnInitializedAsync()
+        => _grupper = await Grupper.HentAktiveAsync();
+
+    private async Task LastInnAsync()
+    {
+        if (string.IsNullOrEmpty(_valgtKode))
+        {
+            _frister = [];
+            return;
+        }
+
+        _lastet = false;
+        // Kjør den valgte gruppens synlighetsspørring i backend (samme filter som ellers).
+        var ctx = Synlighetskontekst.ForGruppe(_valgtKode);
+        _frister = await Lesing.HentSynligeAsync(ctx, new FristFilter { InkluderHistorikk = true });
+        _lastet = true;
+    }
+}
