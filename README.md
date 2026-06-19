@@ -15,6 +15,8 @@ Drift på Azure med infrastruktur som kode (Bicep).
 - [`SYSTEMARKITEKTUR.md`](SYSTEMARKITEKTUR.md) — teknisk arkitektur og datamodell.
 - [`BRUKERHISTORIER.md`](BRUKERHISTORIER.md) — roller og brukerhistorier.
 - [`utviklingsplan-aarshjul-frister.md`](utviklingsplan-aarshjul-frister.md) — prosjektramme og faseplan.
+- [`fase2-plan.md`](fase2-plan.md) — detaljert byggeplan for fase 2 (automatikk).
+- [`fase3-plan.md`](fase3-plan.md) — detaljert byggeplan for fase 3 (mal og generering).
 - [`claude-md-opplegg.md`](claude-md-opplegg.md) — opplegg for kontekstbevaring mellom byggeøkter.
 
 ## Utviklingskontekst (Claude Code)
@@ -37,8 +39,9 @@ Drift på Azure med infrastruktur som kode (Bicep).
 **Fase 1 (fundament) er ferdig** og ligger i PR #1: .NET 10 / ASP.NET Core + EF Core,
 Azure SQL, Blazor (Interactive Server), server-side synlighetsfiltrering, Entra-innlogging,
 manuell innlegging, de tre visningene, administrator-innsyn, og grunnleggende Bicep + CI.
-23 tester grønt. Neste er Fase 2 (automatikk: kilde, godkjenningskø, brukerforslag,
-Word-utskrift, bakgrunnsjobb).
+23 tester grønt. Planleggingen av Fase 2 (automatikk) og Fase 3 (mal og generering) er
+ferdig — se `fase2-plan.md` og `fase3-plan.md`. Neste er koding av Fase 2 (kilde,
+godkjenningskø, brukerforslag, Word-utskrift, bakgrunnsjobb), deretter Fase 3.
 
 Se `.claude/rules/beslutningslogg.md` («Status nå») for fremdrift og neste steg, og
 `.claude/rules/arkitektur.md` for stack, miljøoppsett og kommandoer.

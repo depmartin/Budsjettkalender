@@ -88,4 +88,4 @@ For Fase 2 finnes allerede tabellene **Forslag (+ UttrekksBevis), BehandletDokum
 
 ## Faseinndeling
 
-Byggingen følger kravdokumentets tre faser (kap. 11) og utviklingsplanen. Fase 1: fundament (datamodell, Entra, server-side synlighet, manuell innlegging, de tre visningene, grunnleggende Bicep). Fase 2: automatikk (kilde, oppdagelse, dedup, uttrekk, godkjenningskø, brukerforslag, Word-utskrift) — detaljert byggeplan i `../../fase2-plan.md`. Fase 3: mal og generering (gjentaksregler, generér neste år, synlighetsregler, valgårslogikk).
+Byggingen følger kravdokumentets tre faser (kap. 11) og utviklingsplanen. Fase 1: fundament (datamodell, Entra, server-side synlighet, manuell innlegging, de tre visningene, grunnleggende Bicep). Fase 2: automatikk (kilde, oppdagelse, dedup, uttrekk, godkjenningskø, brukerforslag, Word-utskrift) — detaljert byggeplan i `../../fase2-plan.md`. Fase 3: mal og generering (gjentaksregler, generér neste år, synlighetsregler, valgårslogikk) — detaljert byggeplan i `../../fase3-plan.md`. Planleggingen av både fase 2 og fase 3 er ferdig (begge planer foreligger); kodingen gjenstår og tas fase for fase.
