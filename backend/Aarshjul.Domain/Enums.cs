@@ -8,13 +8,18 @@ public enum Kategori
     Regnskap
 }
 
-/// <summary>Livssyklusstatus for en frist/forslag. `Avvist` er en designutvidelse (SYSTEMARKITEKTUR 3.1).</summary>
+/// <summary>Livssyklusstatus for en frist/forslag. `Avvist` er en designutvidelse (SYSTEMARKITEKTUR 3.1);
+/// `Forkastet` er auto-forkastede robotforslag i den reverserbare forkastet-listen (designintervju 2026-06-19).</summary>
 public enum FristStatus
 {
     Forslag,
     Godkjent,
     Fullfoert,
-    Avvist
+    Avvist,
+
+    /// <summary>Robotforslag auto-forkastet (lav konfidens OG ingen gjenkjennelig dato). Ligger i
+    /// forkastet-listen, reverserbart: admin kan hente det tilbake til køen eller slette det. Aldri stille.</summary>
+    Forkastet
 }
 
 /// <summary>Hvor en frist eller et forslag stammer fra.</summary>
@@ -56,11 +61,23 @@ public enum Regeltype
     RelativTilMilepael
 }
 
-/// <summary>Behandlingsstatus for et oppdaget kildedokument (kravdok. 3.4).</summary>
+/// <summary>Behandlingsstatus for et oppdaget kildedokument (kravdok. 3.4). Mellomtilstandene
+/// `HentingFeilet`/`FeiletFlagget` støtter retry-med-forsøksteller og liveness (designintervju 2026-06-19).</summary>
 public enum BehandletStatus
 {
+    /// <summary>Oppdaget, men ennå ikke hentet/uttrukket.</summary>
     Ny,
+
+    /// <summary>Hent()/uttrekk eller forrige forsøk feilet; venter nytt forsøk (forsøksteller ikke nådd grensen).</summary>
+    HentingFeilet,
+
+    /// <summary>Forsøksgrensen er nådd; dokumentet er flagget til administrator og forsvinner ikke stille.</summary>
+    FeiletFlagget,
+
+    /// <summary>Forslag laget fra dokumentet (ligger i køen eller forkastet-listen).</summary>
     ForslagLaget,
+
+    /// <summary>Ferdig behandlet — foreslås aldri på nytt (godkjent/avvist/slettet fra forkastet-kø).</summary>
     FerdigBehandlet
 }
 
