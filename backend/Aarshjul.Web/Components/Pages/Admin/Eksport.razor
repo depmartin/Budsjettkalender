@@ -1,0 +1,75 @@
+@page "/admin/eksport"
+@attribute [Authorize(Policy = Autorisasjon.ErAdministrator)]
+@inject IGruppetjeneste Grupper
+
+<PageTitle>Eksporter frister til Word</PageTitle>
+
+<h1>Eksporter til Word</h1>
+<p class="ingress">
+    Velg en gruppe og en periode. Utvalget følger nøyaktig den gruppens tilgang (samme
+    synlighetsfilter som ellers), slik at «for POL» gir det settet politisk ledelse selv ville sett.
+    «Alt» gir ditt fulle innsyn og merkes som FIN-internt.
+</p>
+
+<div class="skjema">
+    <label class="filtervalg">
+        <input type="checkbox" @bind="_alt" /> Alt (mitt fulle innsyn – FIN-internt)
+    </label>
+
+    @if (!_alt)
+    {
+        <label>Gruppe
+            <select @bind="_valgtKode">
+                <option value="">(velg gruppe)</option>
+                @foreach (var gruppe in _grupper)
+                {
+                    <option value="@gruppe.Kode">@gruppe.Navn (@gruppe.Kode)</option>
+                }
+            </select>
+        </label>
+    }
+
+    <div class="skjemarad">
+        <label>Fra dato
+            <input type="date" @bind="_fra" />
+        </label>
+        <label>Til dato
+            <input type="date" @bind="_til" />
+        </label>
+    </div>
+
+    @if (KanLasteNed)
+    {
+        <a class="knapp knapp-primær" href="@Nedlastingsurl">Last ned .docx</a>
+    }
+    else
+    {
+        <p class="melding">Velg «alt» eller en gruppe for å laste ned.</p>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<GruppeDto> _grupper = [];
+    private bool _alt;
+    private string _valgtKode = "";
+    private DateOnly? _fra;
+    private DateOnly? _til;
+
+    protected override async Task OnInitializedAsync()
+        => _grupper = await Grupper.HentAktiveAsync();
+
+    private bool KanLasteNed => _alt || !string.IsNullOrEmpty(_valgtKode);
+
+    private string Nedlastingsurl
+    {
+        get
+        {
+            var deler = new List<string>();
+            if (_alt) deler.Add("alt=true");
+            else if (!string.IsNullOrEmpty(_valgtKode)) deler.Add($"gruppe={Uri.EscapeDataString(_valgtKode)}");
+            if (_fra is { } f) deler.Add($"fra={f:yyyy-MM-dd}");
+            if (_til is { } t) deler.Add($"til={t:yyyy-MM-dd}");
+            return "/api/eksport/word?" + string.Join("&", deler);
+        }
+    }
+}

@@ -1,6 +1,9 @@
 using Aarshjul.Application.Frister;
+using Aarshjul.Application.Grupper;
 using Aarshjul.Application.Synlighet;
+using Aarshjul.Application.Utskrift;
 using Aarshjul.Domain;
+using Aarshjul.Web.Sikkerhet;
 
 namespace Aarshjul.Web.Api;
 
@@ -27,6 +30,49 @@ public static class FristEndepunkter
             var frister = await lesing.HentLandingsutvalgAsync(ctx, idag, LesFilter(http.Request.Query), ct);
             return Results.Ok(frister);
         });
+
+        // Word-utskrift (kravdok. kap. 8): utvalget følger den valgte gruppens faktiske tilgang via
+        // samme server-side synlighetsfilter («se som rolle»); «alt» gir administrators fulle innsyn.
+        app.MapGet("/api/eksport/word", EksporterWord).RequireAuthorization(Autorisasjon.ErAdministrator);
+    }
+
+    private static async Task<IResult> EksporterWord(
+        HttpContext http, IFristlesing lesing, IWordEksport eksport, IGruppetjeneste grupper, CancellationToken ct)
+    {
+        var q = http.Request.Query;
+        var alt = q["alt"] == "true";
+        var gruppeKode = q["gruppe"].FirstOrDefault();
+        DateOnly? fra = DateOnly.TryParse(q["fra"].ToString(), out var f) ? f : null;
+        DateOnly? til = DateOnly.TryParse(q["til"].ToString(), out var t) ? t : null;
+
+        ISynlighetskontekst ctx;
+        string etikett;
+        if (alt)
+        {
+            ctx = new Synlighetskontekst(serAlt: true, grupper: []);
+            etikett = "alle";
+        }
+        else if (!string.IsNullOrWhiteSpace(gruppeKode))
+        {
+            ctx = Synlighetskontekst.ForGruppe(gruppeKode);
+            var aktive = await grupper.HentAktiveAsync(ct);
+            etikett = aktive.FirstOrDefault(g => g.Kode == gruppeKode)?.Navn ?? gruppeKode;
+        }
+        else
+        {
+            return Results.BadRequest("Velg en synlighetsgruppe eller «alt».");
+        }
+
+        // Periodevinduet styrer utvalget; historikk tas med så fortidige frister i vinduet ikke faller bort.
+        var filter = new FristFilter { FraDato = fra, TilDato = til, InkluderHistorikk = true };
+        var frister = await lesing.HentSynligeAsync(ctx, filter, ct);
+
+        var foresporsel = new Utskriftsforesporsel(alt ? null : gruppeKode, etikett, fra, til, alt);
+        var bytes = eksport.GenererFristdokument(foresporsel, frister);
+
+        var filnavnsdel = alt ? "alle" : gruppeKode!;
+        var filnavn = $"frister-{filnavnsdel}-{fra:yyyyMMdd}_{til:yyyyMMdd}.docx";
+        return Results.File(bytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", filnavn);
     }
 
     private static FristFilter LesFilter(IQueryCollection q)

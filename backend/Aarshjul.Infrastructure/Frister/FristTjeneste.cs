@@ -86,6 +86,17 @@ public class FristTjeneste(AppDbContext db, TimeProvider klokke) : IFristlesing
             spørring = spørring.Where(f => aar.Contains(f.Budsjettaar));
         }
 
+        // Periodevindu (utskrift): begrens på sorteringsdag. Settes uavhengig av historikkregelen.
+        if (filter.FraDato is { } fra)
+        {
+            spørring = spørring.Where(f => f.Sorteringsdag >= fra);
+        }
+
+        if (filter.TilDato is { } til)
+        {
+            spørring = spørring.Where(f => f.Sorteringsdag <= til);
+        }
+
         // Frist vises t.o.m. fristdagen; flyttes til historikk dato + 1 (ren kalender, ingen forsinket-tilstand).
         if (kunFramover || !filter.InkluderHistorikk)
         {
