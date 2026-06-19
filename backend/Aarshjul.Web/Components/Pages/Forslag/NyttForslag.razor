@@ -1,0 +1,220 @@
+@page "/forslag/ny"
+@page "/forslag/{Id:guid}/rediger"
+@page "/forslag/endre/{FristId:guid}"
+@attribute [Authorize(Policy = Autorisasjon.KanForeslaa)]
+@inject IForslagsinnsending Innsending
+@inject IFristlesing Fristlesing
+@inject IGruppetjeneste Grupper
+@inject Gjeldendebrukerkilde Brukerkilde
+@inject Synlighetskontekstkilde Kontekstkilde
+@inject NavigationManager Nav
+
+<PageTitle>@Tittel</PageTitle>
+
+<h1>@Tittel</h1>
+
+@if (ErEndre)
+{
+    <p class="melding">
+        Du foreslår en endring på en publisert frist. Forslaget går til administrators
+        godkjenningskø; originalfristen — inkludert hvem den er synlig for — står uendret til
+        administrator godkjenner. Et endringsforslag rører kun innholdet, ikke synligheten.
+    </p>
+}
+else
+{
+    <p class="melding">
+        Forslaget går til administrators godkjenningskø og er usynlig for andre til det er godkjent.
+        Synlighet er kun et forslag administrator beslutter endelig.
+    </p>
+}
+
+@if (!_lastet)
+{
+    <p class="melding">Laster …</p>
+}
+else if (_inndata is null)
+{
+    <p class="melding">
+        @(ErEndre
+            ? "Fristen finnes ikke, eller du har ikke tilgang til den."
+            : "Forslaget finnes ikke, eller kan ikke redigeres.")
+    </p>
+}
+else
+{
+    @if (_feil is not null)
+    {
+        <div class="feil">@_feil</div>
+    }
+
+    <form class="skjema" @onsubmit="Send" @onsubmit:preventDefault="true">
+        <label>Tittel
+            <input @bind="_inndata.Tittel" />
+        </label>
+
+        <div class="skjemarad">
+            <label>Presisjon
+                <select @bind="_inndata.Datopresisjon">
+                    <option value="@Datopresisjon.Dag">Dag</option>
+                    <option value="@Datopresisjon.Maaned">Måned</option>
+                </select>
+            </label>
+            <label>Dato
+                <input type="date" @bind="_inndata.Dato" />
+            </label>
+            @if (_inndata.Datopresisjon == Datopresisjon.Maaned)
+            {
+                <label>Kvalifikator
+                    <select @bind="_kvalifikator">
+                        <option value="">(ingen)</option>
+                        <option value="Primo">Primo</option>
+                        <option value="Medio">Medio</option>
+                        <option value="Ultimo">Ultimo</option>
+                    </select>
+                </label>
+            }
+        </div>
+
+        <div class="skjemarad">
+            <label>Budsjettår
+                <input type="number" @bind="_inndata.Budsjettaar" />
+            </label>
+            <label>Kategori
+                <select @bind="_inndata.Kategori">
+                    <option value="@Kategori.Budsjett">Budsjett</option>
+                    <option value="@Kategori.Gulbok">Gul bok</option>
+                    <option value="@Kategori.Regnskap">Regnskap</option>
+                </select>
+            </label>
+        </div>
+
+        <label>Notat
+            <textarea @bind="_inndata.Notat" rows="2"></textarea>
+        </label>
+
+        @if (!ErEndre)
+        {
+            <fieldset class="synlighet">
+                <legend>Foreslått synlig for (valgfritt – administrator beslutter endelig)</legend>
+                @foreach (var gruppe in _grupper)
+                {
+                    <label class="filtervalg @(gruppe.Kode == "POL" ? "pol-valg" : "")">
+                        <input type="checkbox"
+                               checked="@_inndata.ForeslaattSynlighet.Contains(gruppe.Kode)"
+                               @onchange="e => VekslGruppe(gruppe.Kode, (bool)e.Value!)" />
+                        @gruppe.Navn (@gruppe.Kode)
+                    </label>
+                }
+            </fieldset>
+        }
+
+        <div class="skjemarad">
+            <button type="submit" class="knapp knapp-primær">Send inn</button>
+            <button type="button" class="knapp" @onclick='() => Nav.NavigateTo("/forslag/mine")'>Avbryt</button>
+        </div>
+    </form>
+}
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+    [Parameter] public Guid? FristId { get; set; }
+
+    private BrukerforslagInndata? _inndata;
+    private IReadOnlyList<GruppeDto> _grupper = [];
+    private GjeldendeBruker? _bruker;
+    private string _kvalifikator = "";
+    private string? _feil;
+    private bool _lastet;
+
+    private bool ErEndre => FristId is not null;
+
+    private string Tittel => FristId is not null
+        ? "Foreslå endring på en publisert frist"
+        : Id is null ? "Foreslå en frist" : "Rediger og send inn på nytt";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _grupper = await Grupper.HentAktiveAsync();
+        _bruker = await Brukerkilde.HentAsync();
+
+        if (FristId is { } fristId)
+        {
+            // Endre-modus: forhåndsutfyll innholdsfeltene fra den publiserte fristen (kun hvis
+            // brukeren har rett til å se den — synlighet håndheves på server). Synlighet røres ikke.
+            var ctx = await Kontekstkilde.HentAsync();
+            var frist = await Fristlesing.HentEnAsync(ctx, fristId);
+            if (frist is not null)
+            {
+                _inndata = new BrukerforslagInndata
+                {
+                    Tittel = frist.Tittel,
+                    Dato = frist.Dato,
+                    Datopresisjon = frist.Datopresisjon,
+                    Datokvalifikator = frist.Datokvalifikator,
+                    Budsjettaar = frist.Budsjettaar,
+                    Kategori = frist.Kategori,
+                    Notat = frist.Notat,
+                    EndrerFristId = fristId
+                };
+                if (frist.Datokvalifikator is { } kv)
+                {
+                    _kvalifikator = kv.ToString();
+                }
+            }
+        }
+        else if (Id is null)
+        {
+            _inndata = new BrukerforslagInndata();
+        }
+        else
+        {
+            _inndata = await Innsending.HentForRedigeringAsync(Id.Value, _bruker.Id);
+            if (_inndata?.Datokvalifikator is { } k)
+            {
+                _kvalifikator = k.ToString();
+            }
+        }
+        _lastet = true;
+    }
+
+    private void VekslGruppe(string kode, bool på)
+    {
+        if (på)
+        {
+            if (!_inndata!.ForeslaattSynlighet.Contains(kode))
+            {
+                _inndata.ForeslaattSynlighet.Add(kode);
+            }
+        }
+        else
+        {
+            _inndata!.ForeslaattSynlighet.Remove(kode);
+        }
+    }
+
+    private async Task Send()
+    {
+        _feil = null;
+        _inndata!.Datokvalifikator =
+            _inndata.Datopresisjon == Datopresisjon.Maaned && !string.IsNullOrEmpty(_kvalifikator)
+                ? Enum.Parse<Datokvalifikator>(_kvalifikator)
+                : null;
+        try
+        {
+            if (Id is null)
+            {
+                await Innsending.SendInnAsync(_inndata, _bruker!);
+            }
+            else
+            {
+                await Innsending.SendInnPaaNyttAsync(Id.Value, _inndata, _bruker!);
+            }
+            Nav.NavigateTo("/forslag/mine");
+        }
+        catch (Valideringsfeil f)
+        {
+            _feil = f.Message;
+        }
+    }
+}

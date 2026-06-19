@@ -36,6 +36,17 @@ public class FristTjeneste(AppDbContext db, TimeProvider klokke) : IFristlesing
             .ToList();
     }
 
+    public async Task<FristDto?> HentEnAsync(ISynlighetskontekst ctx, Guid fristId, CancellationToken ct = default)
+    {
+        // Samme synlighetsfilter som listene — en frist konteksten ikke ser hentes aldri fra db.
+        var spørring = db.Frister
+            .AsNoTracking()
+            .Where(f => f.Id == fristId && f.Status == FristStatus.Godkjent)
+            .FiltrerSynlige(ctx);
+
+        return await Projiser(spørring).FirstOrDefaultAsync(ct);
+    }
+
     public async Task<IReadOnlyList<int>> HentTilgjengeligeBudsjettaarAsync(
         ISynlighetskontekst ctx, bool inkluderHistorikk, CancellationToken ct = default)
     {
@@ -75,6 +86,17 @@ public class FristTjeneste(AppDbContext db, TimeProvider klokke) : IFristlesing
             spørring = spørring.Where(f => aar.Contains(f.Budsjettaar));
         }
 
+        // Periodevindu (utskrift): begrens på sorteringsdag. Settes uavhengig av historikkregelen.
+        if (filter.FraDato is { } fra)
+        {
+            spørring = spørring.Where(f => f.Sorteringsdag >= fra);
+        }
+
+        if (filter.TilDato is { } til)
+        {
+            spørring = spørring.Where(f => f.Sorteringsdag <= til);
+        }
+
         // Frist vises t.o.m. fristdagen; flyttes til historikk dato + 1 (ren kalender, ingen forsinket-tilstand).
         if (kunFramover || !filter.InkluderHistorikk)
         {
@@ -85,6 +107,9 @@ public class FristTjeneste(AppDbContext db, TimeProvider klokke) : IFristlesing
     }
 
     private static Task<List<FristDto>> ProjiserAsync(IQueryable<Frist> spørring, CancellationToken ct)
+        => Projiser(spørring).ToListAsync(ct);
+
+    private static IQueryable<FristDto> Projiser(IQueryable<Frist> spørring)
         => spørring
             .Select(f => new FristDto(
                 f.Id,
@@ -100,8 +125,7 @@ public class FristTjeneste(AppDbContext db, TimeProvider klokke) : IFristlesing
                 f.DokumentId,
                 f.Notat,
                 f.Status,
-                f.Synlighet.Select(s => s.GruppeKode).ToList()))
-            .ToListAsync(ct);
+                f.Synlighet.Select(s => s.GruppeKode).ToList()));
 
     private DateOnly Idag() => Datohjelp.Idag(klokke);
 }

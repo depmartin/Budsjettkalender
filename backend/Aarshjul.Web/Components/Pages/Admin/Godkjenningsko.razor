@@ -1,0 +1,289 @@
+@page "/admin/ko"
+@attribute [Authorize(Policy = Autorisasjon.ErAdministrator)]
+@inject IGodkjenningsko Ko
+@inject IGruppetjeneste Grupper
+@inject NavigationManager Nav
+
+<PageTitle>Godkjenningskø</PageTitle>
+
+<h1>Godkjenningskø</h1>
+
+<div class="filterpanel">
+    <label>Opphav
+        <select @bind="_opphav" @bind:after="LastAsync">
+            <option value="">Alle</option>
+            <option value="@Opphav.Robot">Robot</option>
+            <option value="@Opphav.Bruker">Bruker</option>
+        </select>
+    </label>
+    <label>Type
+        <select @bind="_type" @bind:after="LastAsync">
+            <option value="">Alle</option>
+            <option value="@ForslagType.NyFrist">Ny frist</option>
+            <option value="@ForslagType.Endring">Endring</option>
+            <option value="@ForslagType.Generert">Generert</option>
+        </select>
+    </label>
+    <label>Kategori
+        <select @bind="_kategori" @bind:after="LastAsync">
+            <option value="">Alle</option>
+            <option value="@Kategori.Budsjett">Budsjett</option>
+            <option value="@Kategori.Gulbok">Gul bok</option>
+            <option value="@Kategori.Regnskap">Regnskap</option>
+        </select>
+    </label>
+    <label class="filtervalg">
+        <input type="checkbox" @bind="_kunUkjent" @bind:after="LastAsync" /> Kun «ukjent type»
+    </label>
+</div>
+
+@if (!_lastet)
+{
+    <p class="melding">Laster …</p>
+}
+else if (_elementer.Count == 0)
+{
+    <p class="melding">Ingen forslag til behandling.</p>
+}
+else
+{
+    @foreach (var gruppe in _elementer.GroupBy(e => e.KildeEllerInnsender ?? "(ukjent kilde)"))
+    {
+        <section class="kildegruppe">
+            <h2>@gruppe.Key</h2>
+            @foreach (var e in gruppe)
+            {
+                var t = Tilstand(e);
+                <article class="kort @(e.ErUkjentType ? "kort-ukjent" : "")">
+                    <header class="kort-topp">
+                        <span class="merke merke-@e.Opphav.ToString().ToLowerInvariant()">@OpphavNavn(e.Opphav)</span>
+                        <span class="merke">@TypeNavn(e.ForslagType)</span>
+                        @if (e.ErUkjentType)
+                        {
+                            <span class="merke merke-ukjent">Ukjent type</span>
+                        }
+                    </header>
+
+                    <h3>@e.Tittel</h3>
+                    <dl class="kort-felter">
+                        <div><dt>Dato</dt><dd>@FormatDato(e)</dd></div>
+                        <div><dt>Budsjettår</dt><dd>@e.Budsjettaar</dd></div>
+                        <div><dt>Kategori</dt><dd>@Visningformat.KategoriNavn(e.Kategori)</dd></div>
+                        @if (!string.IsNullOrWhiteSpace(e.Loep))
+                        {
+                            <div><dt>Løp</dt><dd>@e.Loep</dd></div>
+                        }
+                        @if (e.ForslagType != ForslagType.Endring)
+                        {
+                            <div><dt>Foreslått synlig for</dt>
+                                <dd>@(e.ForeslaattSynlighet.Count == 0 ? "(ingen)" : string.Join(", ", e.ForeslaattSynlighet))</dd></div>
+                        }
+                    </dl>
+
+                    @if (!string.IsNullOrWhiteSpace(e.Notat))
+                    {
+                        <p class="kort-notat">@e.Notat</p>
+                    }
+
+                    @if (e.Gjeldende is { } g)
+                    {
+                        <div class="endring">
+                            <strong>Endrer publisert frist:</strong>
+                            <span>«@g.Tittel», @g.Dato.ToString("dd.MM.yyyy"), synlig for @string.Join(", ", g.Synlighet)</span>
+                        </div>
+                    }
+
+                    @if (e.Bevis.Count > 0)
+                    {
+                        <table class="bevis">
+                            <thead><tr><th>Felt</th><th>Tolket</th><th>Kildeutdrag</th><th>Konfidens</th></tr></thead>
+                            <tbody>
+                                @foreach (var b in e.Bevis)
+                                {
+                                    <tr class="@(b.Konfidens < 0.5 ? "lav-konfidens" : "")">
+                                        <td>@b.Felt</td>
+                                        <td>@b.TolketVerdi</td>
+                                        <td class="utdrag">@b.Kildeutdrag</td>
+                                        <td>@b.Konfidens.ToString("0.00")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+
+                    @if (t.Feil is not null)
+                    {
+                        <div class="feil">@t.Feil</div>
+                    }
+
+                    @if (t.Modus == Kortmodus.Godkjenn)
+                    {
+                        @if (e.ForslagType == ForslagType.Endring)
+                        {
+                            <p class="melding">Synligheten på fristen står uendret — et endringsforslag rører kun innholdet.</p>
+                        }
+                        else
+                        {
+                            <fieldset class="synlighet">
+                                <legend>Velg synlighet (POL settes kun ved aktivt valg)</legend>
+                                @foreach (var grp in _grupper)
+                                {
+                                    <label class="filtervalg @(grp.Kode == Pol ? "pol-valg" : "")">
+                                        <input type="checkbox"
+                                               checked="@t.Koder.Contains(grp.Kode)"
+                                               @onchange="ev => VekslKode(t, grp.Kode, (bool)ev.Value!)" />
+                                        @grp.Navn (@grp.Kode)
+                                    </label>
+                                }
+                            </fieldset>
+                        }
+                        <div class="kort-handlinger">
+                            <button class="knapp knapp-primær" @onclick="() => Godkjenn(e, t)">Bekreft godkjenning</button>
+                            <button class="knapp" @onclick="() => t.Modus = Kortmodus.Ingen">Avbryt</button>
+                        </div>
+                    }
+                    else if (t.Modus == Kortmodus.Avvis)
+                    {
+                        <label>Begrunnelse (valgfri)
+                            <textarea @bind="t.Begrunnelse" rows="2"></textarea>
+                        </label>
+                        <div class="kort-handlinger">
+                            <button class="knapp knapp-primær" @onclick="() => Avvis(e, t)">Bekreft avvisning</button>
+                            <button class="knapp" @onclick="() => t.Modus = Kortmodus.Ingen">Avbryt</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="kort-handlinger">
+                            <button class="knapp knapp-primær" @onclick="() => StartGodkjenn(e, t)">Godkjenn</button>
+                            <button class="knapp" @onclick="() => Juster(e)">@(e.ErUkjentType ? "Vurder" : "Juster")</button>
+                            <button class="knapp" @onclick="() => t.Modus = Kortmodus.Avvis">Avvis</button>
+                        </div>
+                    }
+                </article>
+            }
+        </section>
+    }
+}
+
+@code {
+    private const string Pol = "POL";
+
+    private IReadOnlyList<Koelement> _elementer = [];
+    private IReadOnlyList<GruppeDto> _grupper = [];
+    private readonly Dictionary<Guid, Korttilstand> _tilstand = new();
+    private bool _lastet;
+
+    // Filtervalg (tomme strenger = «alle»).
+    private string _opphav = "";
+    private string _type = "";
+    private string _kategori = "";
+    private bool _kunUkjent;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _grupper = await Grupper.HentAktiveAsync();
+        await LastAsync();
+    }
+
+    private async Task LastAsync()
+    {
+        var filter = new Kofilter
+        {
+            Opphav = Enum.TryParse<Opphav>(_opphav, out var o) ? o : null,
+            ForslagType = Enum.TryParse<ForslagType>(_type, out var ft) ? ft : null,
+            Kategori = Enum.TryParse<Kategori>(_kategori, out var k) ? k : null,
+            UkjentType = _kunUkjent ? true : null
+        };
+        _elementer = await Ko.HentKoAsync(filter);
+        _tilstand.Clear();
+        _lastet = true;
+    }
+
+    private Korttilstand Tilstand(Koelement e) =>
+        _tilstand.TryGetValue(e.Id, out var t) ? t : _tilstand[e.Id] = new Korttilstand();
+
+    private void StartGodkjenn(Koelement e, Korttilstand t)
+    {
+        // Endringsforslag rører ikke synlighet; for nye/genererte forslag forhåndsutfylles
+        // foreslått synlighet, men ALDRI POL (settes kun ved aktivt valg).
+        t.Koder = e.ForslagType == ForslagType.Endring
+            ? []
+            : e.ForeslaattSynlighet.Where(k => !string.Equals(k, Pol, StringComparison.OrdinalIgnoreCase)).ToHashSet();
+        t.Feil = null;
+        t.Modus = Kortmodus.Godkjenn;
+    }
+
+    private void VekslKode(Korttilstand t, string kode, bool på)
+    {
+        if (på) t.Koder.Add(kode);
+        else t.Koder.Remove(kode);
+    }
+
+    private void Juster(Koelement e) => Nav.NavigateTo($"/admin/frist/juster/{e.Id}");
+
+    private async Task Godkjenn(Koelement e, Korttilstand t)
+    {
+        t.Feil = null;
+        try
+        {
+            // Endringsforslag sender ingen synlighet — fristens synlig_for står uendret (håndheves i tjenesten).
+            await Ko.GodkjennAsync(new GodkjennInndata
+            {
+                ForslagId = e.Id,
+                Synlighetskoder = e.ForslagType == ForslagType.Endring ? [] : t.Koder.ToList(),
+                PolBekreftet = e.ForslagType != ForslagType.Endring && t.Koder.Contains(Pol)
+            });
+            await LastAsync();
+        }
+        catch (Valideringsfeil f)
+        {
+            t.Feil = f.Message;
+        }
+    }
+
+    private async Task Avvis(Koelement e, Korttilstand t)
+    {
+        t.Feil = null;
+        try
+        {
+            await Ko.AvvisAsync(e.Id, string.IsNullOrWhiteSpace(t.Begrunnelse) ? null : t.Begrunnelse);
+            await LastAsync();
+        }
+        catch (Valideringsfeil f)
+        {
+            t.Feil = f.Message;
+        }
+    }
+
+    private static string FormatDato(Koelement e)
+    {
+        if (e.Dato is not { } d) return "(ingen dato)";
+        if (e.Datopresisjon == Datopresisjon.Maaned)
+        {
+            var maaned = d.ToString("MMMM yyyy");
+            return e.Datokvalifikator is { } kv ? $"{kv.ToString().ToLowerInvariant()} {maaned} (tentativ)" : $"{maaned} (tentativ)";
+        }
+        return d.ToString("dd.MM.yyyy");
+    }
+
+    private static string OpphavNavn(Opphav o) => o switch
+    {
+        Opphav.Robot => "Robot", Opphav.Bruker => "Bruker", _ => "Admin"
+    };
+
+    private static string TypeNavn(ForslagType t) => t switch
+    {
+        ForslagType.Endring => "Endringsforslag", ForslagType.Generert => "Generert", _ => "Ny frist"
+    };
+
+    private enum Kortmodus { Ingen, Godkjenn, Avvis }
+
+    private sealed class Korttilstand
+    {
+        public Kortmodus Modus { get; set; } = Kortmodus.Ingen;
+        public HashSet<string> Koder { get; set; } = [];
+        public string? Begrunnelse { get; set; }
+        public string? Feil { get; set; }
+    }
+}

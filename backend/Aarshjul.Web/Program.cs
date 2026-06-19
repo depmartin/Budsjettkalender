@@ -1,11 +1,19 @@
 using Aarshjul.Application.Brukere;
+using Aarshjul.Application.Brukerforslag;
 using Aarshjul.Application.Frister;
+using Aarshjul.Application.Godkjenningsko;
 using Aarshjul.Application.Grupper;
 using Aarshjul.Application.Synlighet;
+using Aarshjul.Application.Utskrift;
+using Aarshjul.Application.Varsler;
 using Aarshjul.Infrastructure;
 using Aarshjul.Infrastructure.Brukere;
+using Aarshjul.Infrastructure.Brukerforslag;
 using Aarshjul.Infrastructure.Frister;
+using Aarshjul.Infrastructure.Godkjenningsko;
 using Aarshjul.Infrastructure.Grupper;
+using Aarshjul.Infrastructure.Utskrift;
+using Aarshjul.Infrastructure.Varsler;
 using Aarshjul.Web.Api;
 using Aarshjul.Web.Components;
 using Aarshjul.Web.Sikkerhet;
@@ -37,11 +45,16 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IFristlesing, FristTjeneste>();
 builder.Services.AddScoped<IFristskriving, FristskrivingTjeneste>();
+builder.Services.AddScoped<IGodkjenningsko, GodkjenningskoTjeneste>();
+builder.Services.AddScoped<IForslagsinnsending, ForslagsinnsendingTjeneste>();
+builder.Services.AddScoped<IVarseltjeneste, Varseltjeneste>();
 builder.Services.AddScoped<IGruppetjeneste, Gruppetjeneste>();
+builder.Services.AddScoped<IWordEksport, WordEksportTjeneste>();
 builder.Services.AddScoped<IBrukeroppslag, BrukeroppslagTjeneste>();
 builder.Services.AddScoped<ISynlighetskontekst, HttpSynlighetskontekst>();
 builder.Services.AddScoped<IClaimsTransformation, BrukerClaimsTransformation>();
 builder.Services.AddScoped<Synlighetskontekstkilde>();
+builder.Services.AddScoped<Gjeldendebrukerkilde>();
 builder.Services.AddScoped<Visningstilstand>();
 
 // --- Autentisering (Entra ID). Utelates i testmiljø; testene injiserer egen ordning. ---

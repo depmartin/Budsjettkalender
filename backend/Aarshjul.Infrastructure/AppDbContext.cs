@@ -20,6 +20,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<BehandletDokument> BehandledeDokumenter => Set<BehandletDokument>();
     public DbSet<Gjentaksregel> Gjentaksregler => Set<Gjentaksregel>();
     public DbSet<Varsel> Varsler => Set<Varsel>();
+    public DbSet<InnhentingsStatus> InnhentingsStatuser => Set<InnhentingsStatus>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -117,6 +118,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasKey(x => x.Id);
             e.Property(x => x.BrukerId).HasMaxLength(128);
             e.HasIndex(x => x.BrukerId);
+        });
+
+        // --- InnhentingsStatus: liveness-spor, én rad per kilde ---
+        b.Entity<InnhentingsStatus>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Kilde).HasMaxLength(64);
+            e.HasIndex(x => x.Kilde).IsUnique();
         });
     }
 

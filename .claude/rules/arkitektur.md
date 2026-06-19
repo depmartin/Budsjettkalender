@@ -2,7 +2,7 @@
 
 Stabil teknisk referanse for prosjektet «Årshjul for budsjettfrister»: stack, mappestruktur og kommandoer. Endres sjelden. Designbeslutningene bak datamodellen står i `beslutningslogg.md`; brukerflate og roller i `../../BRUKERHISTORIER.md`; full systemarkitektur i `../../SYSTEMARKITEKTUR.md`.
 
-> STATUS: Fase 1 (fundament) er ferdig implementert og testdekket (PR #1, CI grønt, 23 tester). Bekreftet stack: **.NET 10 (LTS) / ASP.NET Core + EF Core, Azure SQL, Blazor Web App (Interactive Server), Azure App Service**. «(bekreftes)» gjelder nå kun bakgrunnsjobb-form og datouttrekksverktøy (avklares i Fase 2). Se beslutningsloggen for full fremdrift og åpne forhold.
+> STATUS: Fase 1 (fundament) ferdig (PR #1 merget). **Fase 2 — de offline-delbare stegene er kodet (PR #5): Steg A (kildeabstraksjon), D (totrinns filtrering), F (godkjenningskø), G (juster fra køen), H (brukerforslag), I (endringsforslag), J (varsel), K (Word-utskrift), pluss `IDatouttrekk`-forberedelse. 94 tester grønt på .NET 10.** Gjenstående Fase 2 (Steg B oppdagelse, C dedup/versjonsmatching, E live datouttrekk, L bakgrunnsjobb) er **blokkert** til `www.regjeringen.no` åpnes i miljøets egress-allowlist. Fase 3 (mal/generering) er ferdig planlagt (`fase3-plan.md`) og er neste kodetrinn — dens avhengigheter (Steg F/G) er nå på plass. Bekreftet stack: **.NET 10 (LTS) / ASP.NET Core + EF Core, Azure SQL, Blazor Web App (Interactive Server), Azure App Service**; bakgrunnsjobb = `BackgroundService` i web-hosten; datouttrekk bak `IDatouttrekk` (default Claude API, lokasjon IT-avklart). Se beslutningsloggen for full fremdrift og åpne forhold.
 
 ## Teknologistabel
 

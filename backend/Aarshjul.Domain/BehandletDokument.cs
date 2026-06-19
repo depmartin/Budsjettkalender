@@ -25,4 +25,11 @@ public class BehandletDokument
     public DateTimeOffset ForstSett { get; set; } = DateTimeOffset.UtcNow;
 
     public BehandletStatus BehandletStatus { get; set; } = BehandletStatus.Ny;
+
+    /// <summary>Antall feilede hent()/uttrekk-forsøk. Et dokument prøves et fast antall ganger over
+    /// påfølgende kjøringer (designintervju 2026-06-19); flagges til admin når grensen er nådd.</summary>
+    public int UttrekksForsoek { get; set; }
+
+    /// <summary>Tidspunkt for siste forsøk (uttrekk/henting), brukes til retry-styring.</summary>
+    public DateTimeOffset? SisteForsoek { get; set; }
 }

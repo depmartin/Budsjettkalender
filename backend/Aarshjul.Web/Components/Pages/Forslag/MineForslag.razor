@@ -1,0 +1,67 @@
+@page "/forslag/mine"
+@attribute [Authorize(Policy = Autorisasjon.KanForeslaa)]
+@inject IForslagsinnsending Innsending
+@inject Gjeldendebrukerkilde Brukerkilde
+@inject NavigationManager Nav
+
+<PageTitle>Mine forslag</PageTitle>
+
+<div class="admintopp">
+    <h1>Mine forslag</h1>
+    <button class="knapp knapp-primær" @onclick='() => Nav.NavigateTo("/forslag/ny")'>Nytt forslag</button>
+</div>
+
+@if (!_lastet)
+{
+    <p class="melding">Laster …</p>
+}
+else if (_mine.Count == 0)
+{
+    <p class="melding">Du har ikke sendt inn noen forslag ennå.</p>
+}
+else
+{
+    <table class="tabell">
+        <thead>
+            <tr><th>Tittel</th><th>Dato</th><th>Budsjettår</th><th>Type</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody>
+            @foreach (var f in _mine)
+            {
+                <tr>
+                    <td>@f.Tittel</td>
+                    <td>@(f.Dato?.ToString("dd.MM.yyyy") ?? "—")</td>
+                    <td>@f.Budsjettaar</td>
+                    <td>@(f.ForslagType == ForslagType.Endring ? "Endring" : "Ny frist")</td>
+                    <td><span class="status status-@f.Status.ToString().ToLowerInvariant()">@StatusTekst(f.Status)</span></td>
+                    <td>
+                        @if (f.Status == FristStatus.Avvist)
+                        {
+                            <a href="@($"/forslag/{f.Id}/rediger")">Rediger og send på nytt</a>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IReadOnlyList<MineForslagElement> _mine = [];
+    private bool _lastet;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var bruker = await Brukerkilde.HentAsync();
+        _mine = await Innsending.HentMineAsync(bruker.Id);
+        _lastet = true;
+    }
+
+    private static string StatusTekst(FristStatus status) => status switch
+    {
+        FristStatus.Forslag => "Venter",
+        FristStatus.Godkjent => "Godkjent",
+        FristStatus.Avvist => "Avvist",
+        _ => status.ToString()
+    };
+}

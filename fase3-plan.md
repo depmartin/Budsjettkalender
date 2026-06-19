@@ -13,10 +13,12 @@ Fase 2-planen ligger i @fase2-plan.md.
 Kravgrunnlag: @kravdokument-aarshjul-frister_v2.md kap. 3.3, 5.4, 6;
 @SYSTEMARKITEKTUR.md kap. 3.1, 3.3, 7, 8; @BRUKERHISTORIER.md 2.4, 4.5.
 
-> MERK OM REKKEFØLGE: Fase 3 planlegges nå fordi all planlegging skal være ferdig før
-> koding starter. **Fase 3-koding forutsetter at Fase 2 er kodet** — særlig
-> godkjenningskøens publiseringshandling (fase2-plan Steg F) og redigeringsskjemaet
-> (Steg G). Selve datamodellen og publiseringsmønsteret finnes allerede fra Fase 1.
+> MERK OM REKKEFØLGE: **Fase 3-avhengighetene er nå på plass (PR #5).** Fase 3-koding
+> forutsatte godkjenningskøens publiseringshandling (fase2-plan Steg F) og redigerings-/
+> juster-skjemaet (Steg G) — begge er kodet. Datamodellen og publiseringsmønsteret finnes
+> fra Fase 1, og `FristskrivingTjeneste`-/`PubliserAsync`-mønsteret gjenbrukes ved
+> godkjenning av genererte forslag. **Fase 3 er dermed klar til å kodes** fra Steg A i denne
+> planen (start ny gren fra `main` etter at PR #5 er merget).
 
 ---
 

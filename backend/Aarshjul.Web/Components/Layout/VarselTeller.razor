@@ -1,0 +1,24 @@
+@inject IVarseltjeneste Varsler
+@inject Gjeldendebrukerkilde Brukerkilde
+
+<NavLink href="/varsler">
+    Varsler@(_uleste > 0 ? $" ({_uleste})" : "")
+</NavLink>
+
+@code {
+    private int _uleste;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var bruker = await Brukerkilde.HentAsync();
+            _uleste = await Varsler.AntallUlesteAsync(bruker.Id);
+        }
+        catch
+        {
+            // Teller er kosmetisk; en feil her skal aldri velte navigasjonen.
+            _uleste = 0;
+        }
+    }
+}
