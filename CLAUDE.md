@@ -20,6 +20,7 @@ Full kravspesifikasjon: @kravdokument-aarshjul-frister_v2.md
 - Beslutninger og hvorfor (LES DENNE FØRST hver økt): @.claude/rules/beslutningslogg.md
 - Teknisk design og datamodell: @SYSTEMARKITEKTUR.md
 - Roller og brukerflate: @BRUKERHISTORIER.md
+- Detaljert byggeplan for fase 2 (automatikk): @fase2-plan.md
 
 ## Arbeidsmåte
 - Bygg i faser slik kravdokumentet beskriver. Fullfør og verifiser én fase før neste.

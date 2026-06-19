@@ -118,7 +118,7 @@ Administrator er alltid en FA-ansatt og utpekes av en annen administrator inne i
 
 Som administrator vil jeg gjennomgå innkomne forslag og avgjøre hvert enkelt, slik at bare kvalitetssikrede frister blir publisert.
 
-Køen er en felles innboks for forslag fra både den automatiske innhentingen og fra brukere. Forslagene er gruppert per kilde, men hvert forslag er et selvstendig kort som godkjennes enkeltvis — det finnes ingen masse-godkjenning av en hel bunke, i tråd med den konservative linjen om at heller én manuell vurdering for mye enn én oversett frist. Hvert kort viser tydelig hvilken kilde forslaget kommer fra. Administrator kan filtrere køen på opphav, kilde, ukjent type og kategori.
+Køen er en felles innboks for forslag fra både den automatiske innhentingen og fra brukere. Forslagene er gruppert per kilde, men hvert forslag er et selvstendig kort som godkjennes enkeltvis — det finnes ingen masse-godkjenning av en hel bunke, i tråd med den konservative linjen om at heller én manuell vurdering for mye enn én oversett frist. Hvert kort viser tydelig hvilken kilde forslaget kommer fra. Administrator kan filtrere køen på opphav, kilde, ukjent type, kategori og forslagstype (der endringsforslag er en egen type, se 4.4).
 
 Handlingene per kort er å godkjenne, justere (åpner redigeringsskjema, deretter godkjenne), eller avvise. For forslag den automatiske innhentingen ikke klarte å kategorisere («ukjent type») er handlingene å vurdere (manuell kategorisering) eller avvise.
 
@@ -128,7 +128,7 @@ Informasjon som må ivaretas: per forslag dets opphav (robot eller bruker), kild
 
 Som administrator vil jeg raskt kunne kontrollere om et automatisk uttrekk er korrekt, slik at jeg kan stole på det uten å lete i dokumentet selv.
 
-Et forslag fra den automatiske innhentingen viser ikke bare de tolkede feltene, men også tekstutdraget uttrekket bygger på og en lenke til kildedokumentet. Der uttrekket er usikkert på et felt, vises et usikkerhetsflagg på akkurat det feltet — for eksempel «kontroller dato» — slik at administrator ledes rett til det som må kontrolleres. Dette gjør køen til noe administrator faktisk kvalitetssikrer, framfor noe som bare kvitteres ut fordi verifisering er for tungvint.
+Et forslag fra den automatiske innhentingen viser ikke bare de tolkede feltene, men alltid også tekstutdraget uttrekket bygger på, ved siden av den tolkede verdien, og en lenke til kildedokumentet. Der uttrekket er usikkert på et felt, vises et usikkerhetsflagg på akkurat det feltet — for eksempel «kontroller dato» — slik at administrator ledes rett til det som må kontrolleres. Flagget følger faste, etterprøvbare regler (for eksempel at en relativ formulering er tolket til en hard dato, eller at tekstutdraget ikke inneholder en gjenkjennelig dato), ikke bare modellens egen selvtillit, slik at administrator kan stole på at det dukker opp på de samme feltene hver gang. Dette gjør køen til noe administrator faktisk kvalitetssikrer, framfor noe som bare kvitteres ut fordi verifisering er for tungvint.
 
 Informasjon som må ivaretas: per felt i et robotforslag både den tolkede verdien, tekstutdraget verdien er hentet fra, og en markering av hvor sikkert uttrekket er. Denne tilleggsinformasjonen hører til forslaget; når forslaget er godkjent, er det den rene fristen som lever videre.
 
@@ -166,6 +166,8 @@ Som administrator vil jeg kunne skrive ut frister til et Word-dokument i FINs no
 
 Utskriften tar to valg: gruppe og periode. Utvalget er de fristene den valgte gruppen faktisk har tilgang til innenfor perioden, slik at «skriv ut for `POL`» gir nøyaktig det settet politisk ledelse selv ville sett, og «skriv ut for `FAG`» utelater FIN-interne frister. Administrator kan i tillegg velge å skrive ut alt — sitt eget fulle innsyn — når dokumentet er til intern bruk. Genereringen skjer i backend, der tilgang og data allerede er kjent.
 
+Dokumentet bærer en synlig topptekst som angir hvilken gruppe og periode utskriften gjelder, slik at en utskrift ikke kan forveksles med en annen gruppes utvalg. «Alt»-utskriften merkes tydeligst som FIN-internt, fordi den er mest sensitiv. Selve utskriftshandlingen logges ikke; det aktive administrator-innsynet (4.8) dekker kontrollbehovet.
+
 ### 4.7 Styre synlighet for politisk ledelse
 
 Som administrator vil jeg at synlighet for politisk ledelse alltid skal være et bevisst valg, slik at en frist aldri ved et uhell deles med politisk ledelse automatisk.
@@ -199,6 +201,14 @@ Som administrator vil jeg kunne gi andre FA-ansatte administratortilgang, slik a
 Kun FA-ansatte kan velges som administrator. Den normale veien til administratorrollen går alltid gjennom en sittende administrator som utpeker en ny. Det finnes ingen selvbetjent mulighet for en FA-ansatt til å gi seg selv administratortilgang.
 
 For det tilfellet at det ikke lenger finnes noen aktiv administrator — slik at køen er frosset og ingen kan utpeke en ny — finnes en nødvei utenfor løsningen: en gjenoppretting via driftsmiljøet (samme mekanisme som setter den første administratoren ved idriftsetting). Denne nødveien forutsetter tilgang til driftsmiljøet og er ikke en funksjon i grensesnittet.
+
+### 4.12 Se at den automatiske innhentingen lever
+
+Som administrator vil jeg kunne se at den automatiske innhentingen faktisk virker, slik at en stille feil ikke fører til at nye rundskriv går ubemerket forbi.
+
+En automatisk innhenting som svikter stille er verre enn ingen automatikk, fordi man da tror oversikten er komplett mens den ikke er det. Administrator ser derfor en status for innhentingen: «sist vellykkede innhenting», der oppdagelsen (lesing av oversiktssiden) og selve nedlastingen/uttrekket spores hver for seg, slik at det fremgår hvilket ledd som eventuelt står stille. Klarer ikke jobben å lese oversiktssiden, varsles administrator framfor at en tom kjøring ser ut som en stille periode uten nye rundskriv. Et enkeltdokument som gjentatte ganger ikke lar seg laste ned, prøves et fast antall ganger over påfølgende kjøringer og flagges deretter til administrator — det forsvinner aldri stille.
+
+Informasjon som må ivaretas: tidspunkt for siste vellykkede oppdagelse og siste vellykkede nedlasting/uttrekk hver for seg, og en forsøksteller per dokument som er oppdaget men ennå ikke ferdig behandlet.
 
 ---
 
