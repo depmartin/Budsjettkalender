@@ -1,3 +1,4 @@
+using Aarshjul.Application.Frister;
 using Aarshjul.Domain;
 
 namespace Aarshjul.Application.Godkjenningsko;
@@ -52,6 +53,14 @@ public sealed record Kofilter
     public ForslagType? ForslagType { get; init; }
 }
 
+/// <summary>
+/// Et forslag forberedt for «juster» i redigeringsskjemaet: forslagets felter som
+/// <see cref="FristInndata"/> (synlighet minus POL, slik at POL aldri forhåndshukes), pluss et
+/// flagg om det er et endringsforslag (da skjules synlighetsvalget — endringsforslag rører aldri
+/// synlighet).
+/// </summary>
+public sealed record ForslagForJustering(FristInndata Felter, bool ErEndring);
+
 /// <summary>Inndata ved godkjenning: hvilket forslag, endelig synlighet, og eksplisitt POL-bekreftelse.</summary>
 public sealed record GodkjennInndata
 {
@@ -79,4 +88,13 @@ public interface IGodkjenningsko
 
     /// <summary>Avviser forslaget (bevares med status avvist) og varsler innsender ved brukerforslag.</summary>
     Task AvvisAsync(Guid forslagId, string? begrunnelse = null, CancellationToken ct = default);
+
+    /// <summary>Henter et åpent forslag forberedt for «juster» i redigeringsskjemaet (kravdok. 5.2).
+    /// Returnerer <c>null</c> om forslaget ikke finnes eller allerede er behandlet.</summary>
+    Task<ForslagForJustering?> HentForslagForJusteringAsync(Guid forslagId, CancellationToken ct = default);
+
+    /// <summary>Justerer forslagets felter og publiserer det i én handling (kravdok. 5.1 «juster …
+    /// deretter godkjenn»). For endringsforslag oppdateres kun innholdet; <c>synlig_for</c> står
+    /// urørt. Returnerer fristens id. Kaster <see cref="Valideringsfeil"/> som <see cref="GodkjennAsync"/>.</summary>
+    Task<Guid> JusterOgGodkjennAsync(Guid forslagId, FristInndata felter, CancellationToken ct = default);
 }

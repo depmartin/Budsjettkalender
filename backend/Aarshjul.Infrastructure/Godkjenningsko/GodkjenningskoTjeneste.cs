@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Aarshjul.Application;
+using Aarshjul.Application.Frister;
 using Aarshjul.Application.Godkjenningsko;
 using Aarshjul.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -80,6 +81,13 @@ public class GodkjenningskoTjeneste(AppDbContext db) : IGodkjenningsko
             .FirstOrDefaultAsync(f => f.Id == inndata.ForslagId && f.Status == FristStatus.Forslag, ct)
             ?? throw new Valideringsfeil("Forslaget finnes ikke eller er allerede behandlet.");
 
+        return await PubliserAsync(forslag, inndata.Synlighetskoder, inndata.PolBekreftet, ct);
+    }
+
+    /// <summary>Felles publisering: gjelder både ren godkjenning og «juster og godkjenn». For
+    /// endringsforslag oppdateres kun mål-fristens innhold; <c>synlig_for</c> står urørt (punkt C).</summary>
+    private async Task<Guid> PubliserAsync(Forslag forslag, IReadOnlyList<string> synlighetskoder, bool polBekreftet, CancellationToken ct)
+    {
         if (forslag.Dato is not { } dato)
             throw new Valideringsfeil("Forslaget mangler dato. Juster forslaget og sett en dato før godkjenning.");
 
@@ -98,7 +106,7 @@ public class GodkjenningskoTjeneste(AppDbContext db) : IGodkjenningsko
         }
         else
         {
-            var koder = await ValiderSynlighetAsync(inndata.Synlighetskoder, inndata.PolBekreftet, ct);
+            var koder = await ValiderSynlighetAsync(synlighetskoder, polBekreftet, ct);
 
             var frist = new Frist
             {
@@ -134,6 +142,60 @@ public class GodkjenningskoTjeneste(AppDbContext db) : IGodkjenningsko
         VarsleVedBrukerforslag(forslag, "Forslaget ditt er avvist.", begrunnelse);
 
         await db.SaveChangesAsync(ct);
+    }
+
+    public async Task<ForslagForJustering?> HentForslagForJusteringAsync(Guid forslagId, CancellationToken ct = default)
+    {
+        var forslag = await db.Forslag.AsNoTracking()
+            .FirstOrDefaultAsync(f => f.Id == forslagId && f.Status == FristStatus.Forslag, ct);
+        if (forslag is null)
+            return null;
+
+        var erEndring = forslag.ForslagType == ForslagType.Endring;
+
+        // Prefyll innholdsfeltene. For endringsforslag skjules synlighet (punkt C); ellers prefylles
+        // foreslått synlighet UTEN POL, slik at POL aldri blir forhåndshuket i skjemaet.
+        var synlighet = erEndring
+            ? []
+            : LesSynlighet(forslag.ForeslaattSynlighet)
+                .Where(k => !string.Equals(k, Pol, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+        var felter = new FristInndata
+        {
+            Tittel = forslag.Tittel,
+            Dato = forslag.Dato ?? DateOnly.FromDateTime(DateTime.Today),
+            Datopresisjon = forslag.Datopresisjon,
+            Datokvalifikator = forslag.Datokvalifikator,
+            Budsjettaar = forslag.Budsjettaar,
+            Kategori = forslag.Kategori,
+            Loep = forslag.Loep,
+            Notat = forslag.Notat,
+            Synlighetskoder = synlighet
+        };
+
+        return new ForslagForJustering(felter, erEndring);
+    }
+
+    public async Task<Guid> JusterOgGodkjennAsync(Guid forslagId, FristInndata felter, CancellationToken ct = default)
+    {
+        var forslag = await db.Forslag
+            .FirstOrDefaultAsync(f => f.Id == forslagId && f.Status == FristStatus.Forslag, ct)
+            ?? throw new Valideringsfeil("Forslaget finnes ikke eller er allerede behandlet.");
+
+        // Overskriv innholdsfeltene fra skjemaet før publisering. Synlighet håndteres i PubliserAsync
+        // (ignoreres for endringsforslag). Aktiv avkryssing av POL i skjemaet ER den aktive bekreftelsen.
+        forslag.Tittel = felter.Tittel;
+        forslag.Dato = felter.Dato;
+        forslag.Datopresisjon = felter.Datopresisjon;
+        forslag.Datokvalifikator = felter.Datopresisjon == Datopresisjon.Maaned ? felter.Datokvalifikator : null;
+        forslag.Budsjettaar = felter.Budsjettaar;
+        forslag.Kategori = felter.Kategori;
+        forslag.Loep = string.IsNullOrWhiteSpace(felter.Loep) ? null : felter.Loep.Trim();
+        forslag.Notat = string.IsNullOrWhiteSpace(felter.Notat) ? null : felter.Notat.Trim();
+
+        var polBekreftet = felter.Synlighetskoder.Any(k => string.Equals(k, Pol, StringComparison.OrdinalIgnoreCase));
+        return await PubliserAsync(forslag, felter.Synlighetskoder, polBekreftet, ct);
     }
 
     private static void SettFristfelter(Frist frist, Forslag forslag, DateOnly dato)

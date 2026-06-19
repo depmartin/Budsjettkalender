@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Aarshjul.Application;
+using Aarshjul.Application.Frister;
 using Aarshjul.Application.Godkjenningsko;
 using Aarshjul.Domain;
 using Aarshjul.Infrastructure;
@@ -221,6 +222,111 @@ public class GodkjenningskoTester : IDisposable
         var id = LeggForslag(synlighetJson: JsonSerializer.Serialize(new[] { "FA", "FIN-FAG" }));
         var element = (await Tjeneste().HentKoAsync()).Single(e => e.Id == id);
         Assert.Equal(["FA", "FIN-FAG"], element.ForeslaattSynlighet.OrderBy(k => k));
+    }
+
+    [Fact]
+    public async Task JusterOgGodkjenn_endrer_innhold_og_publiserer_med_valgt_synlighet()
+    {
+        var id = LeggForslag(opphav: Opphav.Bruker, kilde: "bruker-3", synlighetJson: "[\"FA\"]");
+
+        var felter = new FristInndata
+        {
+            Tittel = "Justert tittel",
+            Dato = new DateOnly(2027, 5, 2),
+            Budsjettaar = 2028,
+            Kategori = Kategori.Gulbok,
+            Loep = "gulbok",
+            Synlighetskoder = ["FA", "FIN-FAG"]
+        };
+
+        var fristId = await Tjeneste().JusterOgGodkjennAsync(id, felter);
+
+        var frist = await _t.Db.Frister.Include(f => f.Synlighet).SingleAsync(f => f.Id == fristId);
+        Assert.Equal("Justert tittel", frist.Tittel);
+        Assert.Equal(new DateOnly(2027, 5, 2), frist.Dato);
+        Assert.Equal(Kategori.Gulbok, frist.Kategori);
+        Assert.Equal("gulbok", frist.Loep);
+        Assert.Equal(["FA", "FIN-FAG"], frist.Synlighet.Select(s => s.GruppeKode).OrderBy(k => k));
+
+        var forslag = await _t.Db.Forslag.SingleAsync(f => f.Id == id);
+        Assert.Equal(FristStatus.Godkjent, forslag.Status);
+    }
+
+    [Fact]
+    public async Task JusterOgGodkjenn_med_POL_i_skjemaet_publiserer_med_POL()
+    {
+        var id = LeggForslag();
+        var felter = new FristInndata
+        {
+            Tittel = "Med POL", Dato = new DateOnly(2027, 3, 15), Budsjettaar = 2028,
+            Kategori = Kategori.Budsjett, Synlighetskoder = ["FA", "POL"]
+        };
+
+        var fristId = await Tjeneste().JusterOgGodkjennAsync(id, felter);
+
+        var frist = await _t.Db.Frister.Include(f => f.Synlighet).SingleAsync(f => f.Id == fristId);
+        Assert.Contains("POL", frist.Synlighet.Select(s => s.GruppeKode));
+    }
+
+    [Fact]
+    public async Task JusterOgGodkjenn_uten_synlighet_avvises()
+    {
+        var id = LeggForslag();
+        var felter = new FristInndata
+        {
+            Tittel = "Uten synlighet", Dato = new DateOnly(2027, 3, 15), Budsjettaar = 2028,
+            Kategori = Kategori.Budsjett, Synlighetskoder = []
+        };
+
+        await Assert.ThrowsAsync<Valideringsfeil>(() => Tjeneste().JusterOgGodkjennAsync(id, felter));
+    }
+
+    [Fact]
+    public async Task JusterOgGodkjenn_av_endringsforslag_oppdaterer_innhold_men_lar_synlig_for_staa_uendret()
+    {
+        var frist = new Frist
+        {
+            Id = Guid.NewGuid(), Tittel = "Opprinnelig", Dato = new DateOnly(2027, 3, 15),
+            Budsjettaar = 2028, Kategori = Kategori.Budsjett, Status = FristStatus.Godkjent, Opphav = Opphav.Admin
+        };
+        frist.Synlighet.Add(new FristSynlighet { GruppeKode = "FA" });
+        frist.Synlighet.Add(new FristSynlighet { GruppeKode = "POL" });
+        _t.Db.Frister.Add(frist);
+        _t.Db.SaveChanges();
+
+        var id = LeggForslag(opphav: Opphav.Bruker, kilde: "bruker-4",
+            type: ForslagType.Endring, endrerFristId: frist.Id);
+
+        // Justert endringsforslag — skjemaet sender ingen synlighet for endringer.
+        var felter = new FristInndata
+        {
+            Tittel = "Justert via endringsforslag", Dato = new DateOnly(2027, 6, 1), Budsjettaar = 2028,
+            Kategori = Kategori.Budsjett, Synlighetskoder = []
+        };
+
+        await Tjeneste().JusterOgGodkjennAsync(id, felter);
+
+        var oppdatert = await _t.Db.Frister.AsNoTracking().Include(f => f.Synlighet).SingleAsync(f => f.Id == frist.Id);
+        Assert.Equal("Justert via endringsforslag", oppdatert.Tittel);
+        Assert.Equal(new DateOnly(2027, 6, 1), oppdatert.Dato);
+        Assert.Equal(["FA", "POL"], oppdatert.Synlighet.Select(s => s.GruppeKode).OrderBy(k => k));
+    }
+
+    [Fact]
+    public async Task HentForslagForJustering_stripper_POL_og_setter_endringsflagg()
+    {
+        var nyId = LeggForslag(synlighetJson: JsonSerializer.Serialize(new[] { "FA", "POL" }));
+        var ny = await Tjeneste().HentForslagForJusteringAsync(nyId);
+        Assert.NotNull(ny);
+        Assert.False(ny!.ErEndring);
+        Assert.Equal("Hovedbudsjettskriv", ny.Felter.Tittel);
+        Assert.Equal(["FA"], ny.Felter.Synlighetskoder);  // POL strippet fra forhåndsutfylling
+
+        var endrId = LeggForslag(type: ForslagType.Endring, endrerFristId: Guid.NewGuid());
+        var endr = await Tjeneste().HentForslagForJusteringAsync(endrId);
+        Assert.NotNull(endr);
+        Assert.True(endr!.ErEndring);
+        Assert.Empty(endr.Felter.Synlighetskoder);
     }
 
     public void Dispose() => _t.Dispose();

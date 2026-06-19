@@ -2,6 +2,7 @@
 @attribute [Authorize(Policy = Autorisasjon.ErAdministrator)]
 @inject IGodkjenningsko Ko
 @inject IGruppetjeneste Grupper
+@inject NavigationManager Nav
 
 <PageTitle>Godkjenningskø</PageTitle>
 
@@ -155,6 +156,7 @@ else
                     {
                         <div class="kort-handlinger">
                             <button class="knapp knapp-primær" @onclick="() => StartGodkjenn(e, t)">Godkjenn</button>
+                            <button class="knapp" @onclick="() => Juster(e)">@(e.ErUkjentType ? "Vurder" : "Juster")</button>
                             <button class="knapp" @onclick="() => t.Modus = Kortmodus.Avvis">Avvis</button>
                         </div>
                     }
@@ -217,6 +219,8 @@ else
         if (på) t.Koder.Add(kode);
         else t.Koder.Remove(kode);
     }
+
+    private void Juster(Koelement e) => Nav.NavigateTo($"/admin/frist/juster/{e.Id}");
 
     private async Task Godkjenn(Koelement e, Korttilstand t)
     {

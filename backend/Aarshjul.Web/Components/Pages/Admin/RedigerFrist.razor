@@ -1,13 +1,26 @@
 @page "/admin/frist/ny"
 @page "/admin/frist/{Id:guid}"
+@page "/admin/frist/juster/{ForslagId:guid}"
 @attribute [Authorize(Policy = Autorisasjon.ErAdministrator)]
 @inject IFristskriving Skriving
+@inject IGodkjenningsko Ko
 @inject IGruppetjeneste Grupper
 @inject NavigationManager Nav
 
-<PageTitle>@(Id is null ? "Ny frist" : "Rediger frist")</PageTitle>
+<PageTitle>@Tittel</PageTitle>
 
-<h1>@(Id is null ? "Ny frist" : "Rediger frist")</h1>
+<h1>@Tittel</h1>
+
+@if (ErJuster)
+{
+    <p class="melding">
+        Du justerer et innkommet forslag. «Lagre» publiserer fristen med de justerte verdiene.
+        @if (_erEndre)
+        {
+            <text>Dette er et endringsforslag — det oppdaterer kun innholdet på den berørte fristen, og synligheten står uendret.</text>
+        }
+    </p>
+}
 
 @if (!_lastet)
 {
@@ -15,7 +28,7 @@
 }
 else if (_inndata is null)
 {
-    <p class="melding">Fristen finnes ikke.</p>
+    <p class="melding">@(ErJuster ? "Forslaget finnes ikke eller er allerede behandlet." : "Fristen finnes ikke.")</p>
 }
 else
 {
@@ -76,50 +89,68 @@ else
             <textarea @bind="_inndata.Notat" rows="2"></textarea>
         </label>
 
-        <fieldset class="synlighet">
-            <legend>Synlig for (velg minst én – POL settes kun ved aktivt valg)</legend>
-            @foreach (var gruppe in _grupper)
-            {
-                <label class="filtervalg @(gruppe.Kode == "POL" ? "pol-valg" : "")">
-                    <input type="checkbox"
-                           checked="@_inndata.Synlighetskoder.Contains(gruppe.Kode)"
-                           @onchange="e => VekslGruppe(gruppe.Kode, (bool)e.Value!)" />
-                    @gruppe.Navn (@gruppe.Kode)
-                </label>
-            }
-        </fieldset>
+        @if (!_erEndre)
+        {
+            <fieldset class="synlighet">
+                <legend>Synlig for (velg minst én – POL settes kun ved aktivt valg)</legend>
+                @foreach (var gruppe in _grupper)
+                {
+                    <label class="filtervalg @(gruppe.Kode == "POL" ? "pol-valg" : "")">
+                        <input type="checkbox"
+                               checked="@_inndata.Synlighetskoder.Contains(gruppe.Kode)"
+                               @onchange="e => VekslGruppe(gruppe.Kode, (bool)e.Value!)" />
+                        @gruppe.Navn (@gruppe.Kode)
+                    </label>
+                }
+            </fieldset>
+        }
 
         <div class="skjemarad">
             <button type="submit" class="knapp knapp-primær">Lagre</button>
-            <button type="button" class="knapp" @onclick='() => Nav.NavigateTo("/admin/frister")'>Avbryt</button>
+            <button type="button" class="knapp" @onclick='() => Nav.NavigateTo(ErJuster ? "/admin/ko" : "/admin/frister")'>Avbryt</button>
         </div>
     </form>
 }
 
 @code {
     [Parameter] public Guid? Id { get; set; }
+    [Parameter] public Guid? ForslagId { get; set; }
 
     private FristInndata? _inndata;
     private IReadOnlyList<GruppeDto> _grupper = [];
     private string _kvalifikatorValg = "";
     private string? _feil;
     private bool _lastet;
+    private bool _erEndre;
+
+    private bool ErJuster => ForslagId is not null;
+
+    private string Tittel => ForslagId is not null
+        ? "Juster forslag"
+        : Id is null ? "Ny frist" : "Rediger frist";
 
     protected override async Task OnInitializedAsync()
     {
         _grupper = await Grupper.HentAktiveAsync();
 
-        if (Id is null)
+        if (ForslagId is { } forslagId)
+        {
+            var forberedt = await Ko.HentForslagForJusteringAsync(forslagId);
+            _inndata = forberedt?.Felter;
+            _erEndre = forberedt?.ErEndring ?? false;
+        }
+        else if (Id is null)
         {
             _inndata = new FristInndata();
         }
         else
         {
             _inndata = await Skriving.HentForRedigeringAsync(Id.Value);
-            if (_inndata?.Datokvalifikator is { } k)
-            {
-                _kvalifikatorValg = k.ToString();
-            }
+        }
+
+        if (_inndata?.Datokvalifikator is { } k)
+        {
+            _kvalifikatorValg = k.ToString();
         }
 
         _lastet = true;
@@ -150,15 +181,21 @@ else
 
         try
         {
-            if (Id is null)
+            if (ForslagId is { } forslagId)
+            {
+                await Ko.JusterOgGodkjennAsync(forslagId, _inndata);
+                Nav.NavigateTo("/admin/ko");
+            }
+            else if (Id is null)
             {
                 await Skriving.OpprettAsync(_inndata);
+                Nav.NavigateTo("/admin/frister");
             }
             else
             {
                 await Skriving.OppdaterAsync(Id.Value, _inndata);
+                Nav.NavigateTo("/admin/frister");
             }
-            Nav.NavigateTo("/admin/frister");
         }
         catch (Valideringsfeil f)
         {
