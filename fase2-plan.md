@@ -89,10 +89,22 @@ Sjekk hvert dokument mot registeret før forslag lages (SYSTEMARKITEKTUR 3.4):
   (hash av hentet PDF-tekst).
 - Kjent nøkkel + uendret hash → hopp over (også når fristene tidligere ble avvist).
 - Kjent nøkkel + ny hash → **auto endringsforslag** (designintervju 2026-06-19): re-uttrekk
-  og lag `Forslag(Endring)` (`EndrerFristId` satt) mot de berørte publiserte fristene,
-  koblet via `Loep` + `Budsjettaar` + `DokumentId`, til admins gjennomgang i køen.
-  (Erstatter «flagg, ikke dublett» — passerer fortsatt køen, ingenting publiseres
-  uautorisert.)
+  og lag `Forslag(Endring)` (`EndrerFristId` satt) mot de berørte publiserte fristene, til
+  admins gjennomgang i køen. (Erstatter «flagg, ikke dublett» — passerer fortsatt køen,
+  ingenting publiseres uautorisert.)
+- **Auto-versjonsmatching (2026-06-19).** Re-uttrukne frister parres på en **funksjons-/
+  tittelavledet identitet innen `Loep` + `Budsjettaar`**, ikke `DokumentId` alene (nummeret
+  kan skifte mellom år, og ett dokument gir flere frister). **Låste krav:** (1) matching må
+  tåle **flere frister per dokument**; (2) **entydig** match → auto-`Forslag(Endring)` mot
+  den matchede fristen; (3) **tvetydig eller manglende** match → **manuell kobling av
+  admin**, aldri et gjettet auto-endringsforslag; (4) er den samlede matchingen usikker,
+  sendes **hele** re-uttrekket til manuell kobling. **Åpent for koding:** hvordan
+  funksjonsnøkkelen utledes (tittelnormalisering vs. eget funksjonstype-felt).
+- **«Foreslått fjernet» (2026-06-19) — tredje køutfall.** Mangler en publisert frist match i
+  et ellers trygt matchet re-uttrekk (de øvrige ble entydig matchet), tennes et **«foreslått
+  fjernet»**-forslag til administrator — aldri en automatisk fjerning. Ingenting fjernes uten
+  godkjenning. Krever modelltillegg (en fjernings-/delta-variant på `Forslag`, koblet via
+  `EndrerFristId`) og en køhandling (Steg F) som ved godkjenning avpubliserer fristen.
 - **Forkastet-liste (designintervju 2026-06-19).** Et uttrekk som er **både** lav
   konfidens **og** uten gjenkjennelig dato auto-forkastes — men **aldri stille**: det
   havner i en synlig, reverserbar «forkastet»-liste admin kan gjennomgå, hente tilbake i
@@ -133,10 +145,14 @@ liveness-sporet — aldri stille.
 Felles innboks (SYSTEMARKITEKTUR 6, kravdok. 5.1): enkeltkort gruppert per kilde, hver
 godkjennes for seg (ingen masse-godkjenning). Filtre: opphav, kilde, ukjent type,
 kategori, forslagstype. Handlinger: godkjenn / juster / avvis (+ vurder for «ukjent
-type»). **Godkjenn** publiserer `Forslag` → `Frist` via `FristskrivingTjeneste`-
-mønsteret (synlighetsvalidering, POL kun ved aktivt valg). **Avvis** setter
-`Status = Avvist` (bevares) og oppretter `Varsel` ved brukerforslag. Admin-innsyn i
-køen gjenbruker `Synlighetsfilter`.
+type»). **Godkjenn** av nytt/generert forslag publiserer `Forslag` → `Frist` via
+`FristskrivingTjeneste`-mønsteret (synlighetsvalidering, POL kun ved aktivt valg).
+**Avvis** setter `Status = Avvist` (bevares) og oppretter `Varsel` ved brukerforslag.
+Admin-innsyn i køen gjenbruker `Synlighetsfilter`. **Endringsforslag rører aldri
+synlighet (punkt C, 2026-06-19):** godkjenning av et `Endring`-forslag oppdaterer kun
+fristens innholdsfelter; `synlig_for` står urørt og ingen synlighet velges/valideres i
+køen. **«Foreslått fjernet»** (Steg C) avgjøres her som et eget kort: godkjenning
+avpubliserer den berørte fristen; avvisning bevarer fristen uendret.
 
 ### Steg G — Redigeringsskjema (gjenbruk fra fase 1)
 `Admin/RedigerFrist` brukes for «juster» og manuell innlegging (kravdok. 5.2).
@@ -150,11 +166,16 @@ notat, foreslått synlighet. Navn fra innlogget identitet (`KildeEllerInnsender`
 `POL` foreslått av bruker krever aktiv bekreftelse fra administrator. «Mine forslag»-
 oversikt viser status (venter/godkjent/avvist); avvist kan redigeres og sendes på nytt.
 
-### Steg I — Endringsforslag
+### Steg I — Endringsforslag  ✔ (flate kodet 2026-06-19)
 `Forslag` med `ForslagType = Endring` og `EndrerFristId` (indeksert). Original står
 uendret til godkjenning; «venter endring»-merke utledes ved oppslag på åpne forslag
 med matchende `EndrerFristId`. Før/etter-visning i køen; flere samtidige tillatt,
-vurderes uavhengig (SYSTEMARKITEKTUR 3.2).
+vurderes uavhengig (SYSTEMARKITEKTUR 3.2). **Endringsforslag rører aldri synlighet
+(punkt C):** skjemaet (`/forslag/endre/{fristId}`) forhåndsutfyller kun innholdsfeltene
+fra fristen via `IFristlesing.HentEnAsync` (synlighets-sikker), og synlighetsseksjonen
+skjules. Bidragsyter starter forslaget fra «Foreslå endring» på `Fristkort`. Ved
+godkjenning står `synlig_for` urørt (Steg F). **Gjenstår:** det diskrete «venter
+endring»-merket på leser-/adminflaten.
 
 ### Steg J — Varsel (`Varsel`)
 Opprettes ved godkjenn/avvis av brukerforslag; `BrukerId`, `Tekst`, valgfri
