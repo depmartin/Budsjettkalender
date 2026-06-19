@@ -5,7 +5,7 @@ Dette er prosjektets hukommelse mellom økter. Les hele ved start av hver økt.
 
 ## Status nå
 - Aktiv fase: **Fase 1 (fundament) AVSLUTTET 2026-06-18 og PR #1 MERGET til main.** Fase 1-koden ligger nå på `main`. **Fase 2-planlegging AVSLUTTET** (`fase2-plan.md` i rot, forankret i fase 1-koden — alle designvalg lukket, kun FINs notatmal-fil og de fire IT-forholdene krever ekstern avklaring; PR #2). **Fase 3-planlegging AVSLUTTET 2026-06-19** (`fase3-plan.md` i rot, forankret i fase 1-koden — mal/generering, valgårslogikk, synlighetsregler). **All planlegging for fase 2 og 3 er nå ferdig før koding; verken fase 2 eller fase 3 er kodet ennå.** Fase 3-koding forutsetter at fase 2 (særlig godkjenningskøens publisering) er kodet først.
-- Sist fullført: **Fase 2-koding pågår — 81/81 tester grønt på .NET 10.** Ferdig så langt:
+- Sist fullført: **Fase 2-koding pågår — 94/94 tester grønt på .NET 10.** Ferdig så langt:
   - **Steg A** kildeabstraksjon (`backend/kilder`/`Aarshjul.Kilder`: `IKilde`, `OppdagResultat`/`Oppdagutfall`, `HentResultat`/`Hentutfall`, `Dokumentreferanse`).
   - **Modelltillegg + EF-migrasjon `Fase2Innhenting`** (`BehandletDokument.UttrekksForsoek`/`SisteForsoek`; `BehandletStatus` + `HentingFeilet`/`FeiletFlagget`; `FristStatus.Forkastet`; ny entitet `InnhentingsStatus` for liveness).
   - **Steg D** totrinns filtrering (`Loepmonstre` + `Totrinnsfilter.Klassifiser`).
@@ -14,12 +14,14 @@ Dette er prosjektets hukommelse mellom økter. Les hele ved start av hver økt.
   - **Steg H** brukerforslag: `IForslagsinnsending`/`ForslagsinnsendingTjeneste` (+ `Gjeldendebrukerkilde`) + flater `/forslag/ny`, `/forslag/{id}/rediger`, `/forslag/mine`.
   - **Steg I (komplett)** endringsforslag: `IFristlesing.HentEnAsync` (synlighets-sikker by-id), endre-modus i forslagsskjemaet (`/forslag/endre/{fristId}`), «Foreslå endring»-lenke på `Fristkort`. **Punkt C (korrigering av Steg F): endringsforslag rører aldri synlighet** — `GodkjennAsync` oppdaterer kun innhold for `Endring`, `synlig_for` står urørt, ingen synlighetsvalidering; køflaten viser ingen synlighetsvelger for endringsforslag.
   - **Steg J** varsel-innboks: `IVarseltjeneste`/`Varseltjeneste` + `/varsler` + `VarselTeller` i nav.
+  - **Steg G** «juster» fra køen (felles RedigerFrist-skjema, valg A): `IGodkjenningsko.HentForslagForJusteringAsync` + `JusterOgGodkjennAsync` (felles `PubliserAsync` delt med `GodkjennAsync`), rute `/admin/frist/juster/{forslagId}`, «Juster»/«Vurder»-knapp i køflaten.
+  - **Steg K** Word-utskrift: `FristFilter.FraDato/TilDato`, `IWordEksport`/`WordEksportTjeneste` (Open XML SDK), endepunkt `/api/eksport/word` (admin), flate `/admin/eksport`. Utvalg via `Synlighetskontekst.ForGruppe`/`SerAlt`.
   - `dotnet-ef` 10.0.9 + .NET 10 SDK installeres i ferskt miljø. Forut: Fase 1, PR #3/#4 merget, designintervju (se beslutningene over).
 - **BLOKKERER Steg B/E:** `www.regjeringen.no` er ikke i miljøets network egress-allowlist (svar: «Host not in allowlist»). Egress-endring slår trolig først inn i ny sesjon/miljø. Steg B (`OppdagAsync` mot live side) og Steg E (datouttrekk) kan ikke bygges/valideres mot live kilde før verten er åpnet. Bygg parseren mot ekte markup når egress er på plass (brukerens valg), evt. mot fixture i mellomtiden.
 - Neste steg (Fase 2):
   1. Les `CLAUDE.md` + denne loggen + `arkitektur.md` («Miljøoppsett»: .NET 10 SDK + `dotnet-ef` må installeres i ferskt miljø).
-  2. Bekreft at `dotnet test backend/Aarshjul.slnx` er grønt (81/81) før ny kode.
-  3. **Offline-delbare gjenstående (krever ikke live kilde):** Steg G (redigeringsskjema/«juster» fra køen — gjenbruk `Admin/RedigerFrist`-mønsteret mot et forslag); Steg K Word-utskrift (Open XML SDK, gruppe+periode via `Synlighetsfilter`).
+  2. Bekreft at `dotnet test backend/Aarshjul.slnx` er grønt (94/94) før ny kode.
+  3. **Offline-delbare steg er nå ferdige** (Steg G juster + Steg K Word-utskrift). Gjenstående Fase 2 er kun de egress-blokkerte stegene under.
   4. **Blokkert til egress åpnes (ny sesjon):** Steg B `RegjeringenKilde.OppdagAsync()` (les arkivsiden, parse tabellrader, utled PDF-URL `…/arlige/{aar}/r-{nr}-{aar}.pdf` + eldre fallback; `HttpClient` med ekte User-Agent — 403 ellers; parse-feil → `KlarteIkkeParse`); Steg C dedup + **auto-versjonsmatching på funksjons-/tittelnøkkel innen `Loep`+`Budsjettaar`** + forkastet-liste + auto endringsforslag + **«foreslått fjernet»-utfall** (se beslutning 2026-06-19 nedenfor); Steg E `HentAsync` + live datouttrekk bak `IDatouttrekk`; Steg L bakgrunnsjobb `BackgroundService` + manuell «sjekk nå».
   5. Deretter Fase 3 (kun etter eksplisitt beskjed fra bruker). «Rask vei»-demo (lokal kjøremodus uten Azure SQL/Entra) settes opp når alle tre faser er kodet — brukerens beslutning.
   6. Ekte ende-til-ende-verifisering av Fase 1 (mot reell Azure SQL/Entra-tenant) er en utrullingsoppgave.
@@ -27,6 +29,12 @@ Dette er prosjektets hukommelse mellom økter. Les hele ved start av hver økt.
 - Driftsherding før produksjon (identifisert i gjennomgangen, utsatt til utrulling): (a) databasemigrering bør kjøres som eget deploy-steg, ikke ved app-oppstart (unngå crash-loop ved utilgjengelig/pauset DB og race ved skalering); (b) SQL-brannmurens «Allow Azure services» (0.0.0.0) er bred for FIN-interne data — vurder strammere nettverksisolering; (c) web-appens managed identity må gis DB-bruker via T-SQL (dokumentert i infra/README); (d) `HttpSynlighetskontekst` er global ISynlighetskontekst-binding — fungerer for dagens kall, men komponenter må bruke Synlighetskontekstkilde i kretsen.
 
 ## Beslutninger
+
+### [2026-06-19] Steg G (juster fra køen) og Steg K (Word-utskrift) kodet
+- Beslutning: De to offline-delbare Fase 2-stegene er kodet (94/94 tester grønt).
+  - **Steg G — valg A (felles RedigerFrist-skjema):** «Juster» fra køen åpner `RedigerFrist` i en tredje modus (`/admin/frist/juster/{forslagId}`) forhåndsutfylt fra forslaget; «Lagre» justerer innhold og publiserer i én handling (kravdok. 5.1 «juster … deretter godkjenn»). Publiseringslogikken er trukket ut i en delt privat `PubliserAsync` som både `GodkjennAsync` og `JusterOgGodkjennAsync` bruker, så POL/synlighet håndheves ett sted på server. Endringsforslag skjuler synlighet og rører kun innhold (punkt C). «Ukjent type»-kort får knappen «Vurder» (samme rute) — dekker kravdokumentets manuelle kategorisering. Brukeren valgte A framfor inline-redigering fordi det er spec-tro og gjenbruker hele feltsettet/validering uten duplisering.
+  - **Steg K — Word-utskrift:** `FristFilter` utvidet med `FraDato`/`TilDato` (periodevindu på sorteringsdag). `IWordEksport`/`WordEksportTjeneste` (Open XML SDK, `DocumentFormat.OpenXml` 3.5.1 i Infrastructure) bygger .docx med synlig topptekst fra utvalgskriteriet; «alt» merkes FIN-internt. Admin-endepunkt `/api/eksport/word` bygger synlighetskontekst via `Synlighetskontekst.ForGruppe` (eller `SerAlt`) og gjenbruker samme server-side filter; flate `/admin/eksport`. FINs ekte `.dotx` kobles på senere (strukturell layout nå).
+- Konsekvens: Gjenstående Fase 2 er kun de egress-blokkerte stegene (B `OppdagAsync`, C dedup/versjonsmatching/«foreslått fjernet», E live datouttrekk, L bakgrunnsjobb), som krever at `www.regjeringen.no` åpnes i egress-allowlisten. Ingen EF-migrasjon i Steg G/K.
 
 ### [2026-06-19] Endringsforslag rører aldri synlighet + auto-versjonsmatching og «foreslått fjernet»
 - Beslutning (tre presiseringer fra gjennomgang av Steg I/Steg C):
