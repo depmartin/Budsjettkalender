@@ -1,0 +1,69 @@
+@page "/admin/mal"
+@using Aarshjul.Application.Generering
+@attribute [Authorize(Policy = Autorisasjon.ErAdministrator)]
+@inject IMaltjeneste Maltjeneste
+@inject NavigationManager Nav
+
+<PageTitle>Årsmal</PageTitle>
+
+<div class="admintopp">
+    <h1>Årsmal (gjentaksregler)</h1>
+    <button class="knapp knapp-primær" @onclick='() => Nav.NavigateTo("/admin/mal/ny")'>Ny regel</button>
+</div>
+
+<p class="melding">
+    Malen lagrer regler, ikke datoer. «Generér budsjettår» beregner konkrete datoer fra disse reglene.
+</p>
+
+@if (!_lastet)
+{
+    <p class="melding">Laster …</p>
+}
+else if (_regler.Count == 0)
+{
+    <p class="melding">Ingen regler i malen ennå.</p>
+}
+else
+{
+    <table class="tabell">
+        <thead>
+            <tr><th>Løp</th><th>Tittel</th><th>Kategori</th><th>Regeltype</th><th>Parametre</th><th>Valgår</th><th></th></tr>
+        </thead>
+        <tbody>
+            @foreach (var r in _regler)
+            {
+                <tr>
+                    <td>@r.Loep</td>
+                    <td>@r.Tittel</td>
+                    <td>@Visningformat.KategoriNavn(r.Kategori)</td>
+                    <td>@r.Regeltype</td>
+                    <td><code>@r.Regelparametre</code></td>
+                    <td>@(r.Valgaarssensitiv ? "Ja" : "")</td>
+                    <td>
+                        <a href="@($"/admin/mal/{r.Id}")">Rediger</a>
+                        <button class="knapp-lenke" @onclick="() => Slett(r.Id)">Slett</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IReadOnlyList<MalRegelDto> _regler = [];
+    private bool _lastet;
+
+    protected override async Task OnInitializedAsync() => await Last();
+
+    private async Task Last()
+    {
+        _regler = await Maltjeneste.HentAlleAsync();
+        _lastet = true;
+    }
+
+    private async Task Slett(Guid id)
+    {
+        await Maltjeneste.SlettAsync(id);
+        await Last();
+    }
+}

@@ -1,0 +1,124 @@
+@page "/admin/mal/ny"
+@page "/admin/mal/{Id:guid}"
+@using Aarshjul.Application.Generering
+@attribute [Authorize(Policy = Autorisasjon.ErAdministrator)]
+@inject IMaltjeneste Mal
+@inject NavigationManager Nav
+
+<PageTitle>@Tittel</PageTitle>
+
+<h1>@Tittel</h1>
+
+@if (!_lastet)
+{
+    <p class="melding">Laster …</p>
+}
+else if (_inndata is null)
+{
+    <p class="melding">Regelen finnes ikke.</p>
+}
+else
+{
+    @if (_feil is not null)
+    {
+        <div class="feil">@_feil</div>
+    }
+
+    <form class="skjema" @onsubmit="Lagre" @onsubmit:preventDefault="true">
+        <div class="skjemarad">
+            <label>Løp (funksjonsnavn)
+                <input @bind="_inndata.Loep" placeholder="f.eks. rammefordeling" />
+            </label>
+            <label>Kategori
+                <select @bind="_inndata.Kategori">
+                    <option value="@Kategori.Budsjett">Budsjett</option>
+                    <option value="@Kategori.Gulbok">Gul bok</option>
+                    <option value="@Kategori.Regnskap">Regnskap</option>
+                </select>
+            </label>
+        </div>
+
+        <label>Tittel
+            <input @bind="_inndata.Tittel" />
+        </label>
+
+        <div class="skjemarad">
+            <label>Regeltype
+                <select @bind="_inndata.Regeltype" @bind:after="SettMalParametre">
+                    <option value="@Regeltype.FastDato">Fast dato</option>
+                    <option value="@Regeltype.RelativUkedag">Relativ ukedag</option>
+                    <option value="@Regeltype.RelativTilMilepael">Relativ til milepæl</option>
+                </select>
+            </label>
+            <label class="filtervalg">
+                <input type="checkbox" @bind="_inndata.Valgaarssensitiv" /> Valgårssensitiv
+            </label>
+        </div>
+
+        <label>Regelparametre (JSON)
+            <textarea @bind="_inndata.Regelparametre" rows="3"></textarea>
+        </label>
+        <p class="melding"><small>@Hjelpetekst(_inndata.Regeltype)</small></p>
+
+        <div class="skjemarad">
+            <button type="submit" class="knapp knapp-primær">Lagre</button>
+            <button type="button" class="knapp" @onclick='() => Nav.NavigateTo("/admin/mal")'>Avbryt</button>
+        </div>
+    </form>
+}
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private MalRegelInndata? _inndata;
+    private string? _feil;
+    private bool _lastet;
+
+    private string Tittel => Id is null ? "Ny malregel" : "Rediger malregel";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _inndata = Id is null ? new MalRegelInndata() : await Mal.HentForRedigeringAsync(Id.Value);
+        _lastet = true;
+    }
+
+    private void SettMalParametre()
+    {
+        // Bytt til et fornuftig parameter-utgangspunkt når regeltypen endres.
+        _inndata!.Regelparametre = _inndata.Regeltype switch
+        {
+            Regeltype.RelativUkedag => "{\"maaned\":3,\"uke\":2,\"ukedag\":\"man\",\"aar_forskyvning\":0}",
+            Regeltype.RelativTilMilepael => "{\"anker_loep\":\"fremleggelse\",\"offset_dager\":-7}",
+            _ => "{\"maaned\":1,\"dag\":1,\"aar_forskyvning\":0}"
+        };
+    }
+
+    private async Task Lagre()
+    {
+        _feil = null;
+        try
+        {
+            if (Id is null)
+            {
+                await Mal.OpprettAsync(_inndata!);
+            }
+            else
+            {
+                await Mal.OppdaterAsync(Id.Value, _inndata!);
+            }
+            Nav.NavigateTo("/admin/mal");
+        }
+        catch (Valideringsfeil f)
+        {
+            _feil = f.Message;
+        }
+    }
+
+    private static string Hjelpetekst(Regeltype type) => type switch
+    {
+        Regeltype.FastDato => "Fast dato: { \"maaned\": 7, \"dag\": 20, \"aar_forskyvning\": 0 }. aar_forskyvning plasserer fristen i kalenderår = budsjettår + forskyvning.",
+        Regeltype.RelativUkedag => "Relativ ukedag: { \"maaned\": 3, \"uke\": 2, \"ukedag\": \"man\", \"aar_forskyvning\": 0 }. ukedag: man/tir/ons/tor/fre/lor/son.",
+        Regeltype.RelativTilMilepael => "Relativ til milepæl: { \"anker_loep\": \"fremleggelse\", \"offset_dager\": -7 }. Fristen flytter seg med ankeret.",
+        _ => ""
+    };
+}

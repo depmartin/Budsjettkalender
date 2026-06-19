@@ -82,6 +82,9 @@ a { color: var(--primaer); }
 .merke-kategori { background: #e7f0f7; color: var(--primaer); }
 .merke-gruppe { background: #e9ecef; color: #333; }
 .merke-pol { background: #f3e1f5; color: #8e24aa; font-weight: 600; }
+.merke-ukjent { background: #f8d7da; color: #842029; }
+.merke-valgaar { background: #ffe0b2; color: #8a4b00; font-weight: 600; }
+.knapp-lenke { border: none; background: none; padding: 0; color: var(--primaer); cursor: pointer; font: inherit; text-decoration: underline; margin-left: 0.5rem; }
 
 /* Fargekoding på budsjettår */
 .aar-farge-0 { --aarfarge: #1f77b4; }

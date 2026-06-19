@@ -1,6 +1,7 @@
 using Aarshjul.Application.Brukere;
 using Aarshjul.Application.Brukerforslag;
 using Aarshjul.Application.Frister;
+using Aarshjul.Application.Generering;
 using Aarshjul.Application.Godkjenningsko;
 using Aarshjul.Application.Grupper;
 using Aarshjul.Application.Synlighet;
@@ -10,6 +11,7 @@ using Aarshjul.Infrastructure;
 using Aarshjul.Infrastructure.Brukere;
 using Aarshjul.Infrastructure.Brukerforslag;
 using Aarshjul.Infrastructure.Frister;
+using Aarshjul.Infrastructure.Generering;
 using Aarshjul.Infrastructure.Godkjenningsko;
 using Aarshjul.Infrastructure.Grupper;
 using Aarshjul.Infrastructure.Utskrift;
@@ -39,6 +41,7 @@ if (!erTesting)
 // --- Konfigurasjon ---
 builder.Services.Configure<EntraGruppeOpsjoner>(builder.Configuration.GetSection(EntraGruppeOpsjoner.Seksjon));
 builder.Services.Configure<StartdataOpsjoner>(builder.Configuration.GetSection(StartdataOpsjoner.Seksjon));
+builder.Services.Configure<SynlighetsregelOpsjoner>(builder.Configuration.GetSection(SynlighetsregelOpsjoner.Seksjon));
 
 // --- Tjenester ---
 builder.Services.AddSingleton(TimeProvider.System);
@@ -50,6 +53,9 @@ builder.Services.AddScoped<IForslagsinnsending, ForslagsinnsendingTjeneste>();
 builder.Services.AddScoped<IVarseltjeneste, Varseltjeneste>();
 builder.Services.AddScoped<IGruppetjeneste, Gruppetjeneste>();
 builder.Services.AddScoped<IWordEksport, WordEksportTjeneste>();
+builder.Services.AddSingleton<ISynlighetsregel, Synlighetsregel>();
+builder.Services.AddScoped<IGenereringstjeneste, GenereringsTjeneste>();
+builder.Services.AddScoped<IMaltjeneste, Maltjeneste>();
 builder.Services.AddScoped<IBrukeroppslag, BrukeroppslagTjeneste>();
 builder.Services.AddScoped<ISynlighetskontekst, HttpSynlighetskontekst>();
 builder.Services.AddScoped<IClaimsTransformation, BrukerClaimsTransformation>();
