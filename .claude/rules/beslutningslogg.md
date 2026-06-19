@@ -4,7 +4,7 @@ Kronologisk. Nyeste øverst. Hver oppføring: dato, beslutning, begrunnelse, kon
 Dette er prosjektets hukommelse mellom økter. Les hele ved start av hver økt.
 
 ## Status nå
-- Aktiv fase: **Fase 3 (mal og generering) KODET 2026-06-19** på gren `claude/cool-clarke-vm4uoi` (Steg A–G; 125 tester grønt på .NET 10). Fase 1 + Fase 2-offline-deler var kodet fra før (Steg A/D/F/G/H/I/J/K). Gjenstående Fase 2 (Steg B/C/E/L) er fortsatt blokkert til egress mot `www.regjeringen.no` åpnes. **MERK: koden ligger foreløpig kun på gren — `main` inneholder kun dokumenter (PR-ene #1/#5 ser ikke ut til å være merget til `main`).** Bør ryddes/merges.
+- Aktiv fase: **Fase 3 (mal og generering) KODET 2026-06-19** på gren `claude/cool-clarke-vm4uoi` (Steg A–G; 125 tester grønt på .NET 10), sendt som PR mot `main`. Fase 1 + Fase 2-offline-deler + all planlegging er allerede på `main` (PR #1–#5 merget; `main` står på `f67e26a`). Gjenstående Fase 2 (Steg B/C/E/L) er fortsatt blokkert til egress mot `www.regjeringen.no` åpnes.
 - Neste mulige steg (brukerens valg): (a) lokal demo-/kjøremodus (SQLite + dev-innlogging + demo-data) for å vise løsningen kjørende uten Azure SQL/Entra — størst demonstrasjonsverdi, ikke egress-blokkert; (b) Fase 2-restene B/C/E/L når egress åpnes; (c) Azure-utrulling/driftsherding.
 - Sist fullført: **Fase 2-koding pågår — 94/94 tester grønt på .NET 10.** Ferdig så langt:
   - **Steg A** kildeabstraksjon (`backend/kilder`/`Aarshjul.Kilder`: `IKilde`, `OppdagResultat`/`Oppdagutfall`, `HentResultat`/`Hentutfall`, `Dokumentreferanse`).
