@@ -85,6 +85,8 @@ a { color: var(--primaer); }
 .merke-ukjent { background: #f8d7da; color: #842029; }
 .merke-valgaar { background: #ffe0b2; color: #8a4b00; font-weight: 600; }
 .knapp-lenke { border: none; background: none; padding: 0; color: var(--primaer); cursor: pointer; font: inherit; text-decoration: underline; margin-left: 0.5rem; }
+.demobanner { background: #fff3cd; color: #856404; padding: 0.4rem 1rem; text-align: center; font-size: 0.85rem; }
+.demobanner a { color: #856404; }
 
 /* Fargekoding på budsjettår */
 .aar-farge-0 { --aarfarge: #1f77b4; }

@@ -18,6 +18,7 @@ using Aarshjul.Infrastructure.Utskrift;
 using Aarshjul.Infrastructure.Varsler;
 using Aarshjul.Web.Api;
 using Aarshjul.Web.Components;
+using Aarshjul.Web.Demo;
 using Aarshjul.Web.Sikkerhet;
 using Aarshjul.Web.Visning;
 using Microsoft.AspNetCore.Authentication;
@@ -29,9 +30,24 @@ using Microsoft.Identity.Web.UI;
 
 var builder = WebApplication.CreateBuilder(args);
 var erTesting = builder.Environment.IsEnvironment("Testing");
+// Demo-modus: lokal kjøring uten Azure SQL/Entra (SQLite + dev-innlogging + demo-data).
+// Rører ikke produksjonsstien. Aktiveres med ASPNETCORE_ENVIRONMENT=Demo.
+var erDemo = builder.Environment.IsEnvironment("Demo");
+var brukEntra = !erTesting && !erDemo;
 
-// --- Database (Azure SQL i drift). Utelates i testmiljø; testene registrerer egen provider. ---
-if (!erTesting)
+// --- Database. Produksjon: Azure SQL. Demo: SQLite-fil. Test: registreres av testene. ---
+if (erDemo)
+{
+    // Tom streng i appsettings teller som «ikke satt» → fil-DB (en tom DSN gir ellers en
+    // privat temp-database per tilkobling, så skjemaet «forsvinner» mellom kall).
+    var demoConn = builder.Configuration.GetConnectionString("Aarshjul");
+    if (string.IsNullOrWhiteSpace(demoConn))
+    {
+        demoConn = "Data Source=aarshjul-demo.db";
+    }
+    builder.Services.AddDbContext<AppDbContext>(o => o.UseSqlite(demoConn));
+}
+else if (!erTesting)
 {
     builder.Services.AddDbContext<AppDbContext>(o =>
         o.UseSqlServer(builder.Configuration.GetConnectionString("Aarshjul")
@@ -63,12 +79,22 @@ builder.Services.AddScoped<Synlighetskontekstkilde>();
 builder.Services.AddScoped<Gjeldendebrukerkilde>();
 builder.Services.AddScoped<Visningstilstand>();
 
-// --- Autentisering (Entra ID). Utelates i testmiljø; testene injiserer egen ordning. ---
-if (!erTesting)
+// --- Autentisering. Produksjon: Entra ID (OIDC). Demo: cookie + dev-innlogging (ingen Entra).
+//     Test: injiseres av testene. ---
+if (brukEntra)
 {
     builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
         .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"));
     builder.Services.AddControllersWithViews().AddMicrosoftIdentityUI();
+}
+else if (erDemo)
+{
+    builder.Services.AddAuthentication("Demo")
+        .AddCookie("Demo", o =>
+        {
+            o.LoginPath = "/demo";
+            o.AccessDeniedPath = "/demo";
+        });
 }
 
 builder.Services.AddAuthorization(Autorisasjon.LeggTilPolicyer);
@@ -92,13 +118,27 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 app.MapFristEndepunkter();
-if (!erTesting)
+if (brukEntra)
 {
     app.MapControllers();
 }
+if (erDemo)
+{
+    app.MapDemoEndepunkter();
+}
 
-// --- Migrasjon + seeding ved oppstart (ikke i testmiljø; testene styrer egen database) ---
-if (!erTesting)
+// --- Migrasjon/skjema + seeding ved oppstart (testene styrer egen database). ---
+if (erDemo)
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    // SQLite-skjema fra modellen (EF-migrasjonene er SqlServer-spesifikke).
+    db.Database.EnsureCreated();
+    var opsjoner = scope.ServiceProvider.GetRequiredService<IOptions<StartdataOpsjoner>>().Value;
+    await Startdata.SeedAsync(db, opsjoner);
+    await Demodata.SeedAsync(db);
+}
+else if (!erTesting)
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

@@ -1,6 +1,11 @@
 @inherits LayoutComponentBase
+@inject IWebHostEnvironment Env
 
 <div class="side">
+    @if (ErDemo)
+    {
+        <div class="demobanner">Demo-modus — lokal kjøring uten Entra/Azure SQL. <a href="/demo">Bytt persona</a></div>
+    }
     <header class="topplinje">
         <a class="merkenavn" href="/">Årshjul for budsjettfrister</a>
         <nav class="hovednav">
@@ -24,10 +29,10 @@
             <AuthorizeView>
                 <Authorized>
                     <span class="brukernavn">@context.User.Identity?.Name</span>
-                    <a href="MicrosoftIdentity/Account/SignOut">Logg ut</a>
+                    <a href="@LoggUtUrl">Logg ut</a>
                 </Authorized>
                 <NotAuthorized>
-                    <a href="MicrosoftIdentity/Account/SignIn">Logg inn</a>
+                    <a href="@LoggInnUrl">Logg inn</a>
                 </NotAuthorized>
             </AuthorizeView>
         </div>
@@ -37,6 +42,12 @@
         @Body
     </main>
 </div>
+
+@code {
+    private bool ErDemo => Env.IsEnvironment("Demo");
+    private string LoggInnUrl => ErDemo ? "/demo" : "MicrosoftIdentity/Account/SignIn";
+    private string LoggUtUrl => ErDemo ? "/demo/logg-ut" : "MicrosoftIdentity/Account/SignOut";
+}
 
 <div id="blazor-error-ui" data-nosnippet>
     En uventet feil oppstod.

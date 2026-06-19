@@ -21,6 +21,11 @@ appsettings.*.local.json
 secrets.json
 *.env
 
+# Lokal demo-database (SQLite, miljø Demo) — aldri commit
+aarshjul-demo.db
+aarshjul-demo.db-shm
+aarshjul-demo.db-wal
+
 # OS
 .DS_Store
 Thumbs.db
