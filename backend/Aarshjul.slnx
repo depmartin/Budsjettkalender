@@ -2,6 +2,7 @@
   <Project Path="Aarshjul.Application/Aarshjul.Application.csproj" />
   <Project Path="Aarshjul.Domain/Aarshjul.Domain.csproj" />
   <Project Path="Aarshjul.Infrastructure/Aarshjul.Infrastructure.csproj" />
+  <Project Path="kilder/Aarshjul.Kilder.csproj" />
   <Project Path="Aarshjul.Tests/Aarshjul.Tests.csproj" />
   <Project Path="Aarshjul.Web/Aarshjul.Web.csproj" />
 </Solution>
