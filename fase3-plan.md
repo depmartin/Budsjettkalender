@@ -133,15 +133,13 @@ per regel og lager `Forslag` (`ForslagType = Generert`, `GjentaRegelId` satt,
   anker blir **selv tentativ** — den arver ankerets *presisjon* (`Datopresisjon`/
   `Datokvalifikator`), ikke bare ankerets dato. Tentativitet er dermed en egenskap ved
   beregningen langs kjeden, ikke bare ved en `Valgaarssensitiv`-regel: en frist kan bli
-  tentativ uten selv å være valgårssensitiv. *Åpent for koding:* om dette skrives inn som
-  en eksplisitt beregningsregel allerede i Steg C eller flagges og avklares ved koding —
-  beregningsregelen står uansett fast.
-- **Genereringsflyt ved manuelt anker (åpent, flagges eksplisitt).** Flyten er ikke ren
-  ett-knapps-generering når et anker må settes manuelt (valgårssensitivt
-  framleggings-anker). To kandidater, besluttes ved koding fordi det påvirker Steg
-  F-flaten direkte: (a) **én omgang** — generér alt, uavklarte ankre og deres avhengige
-  blir tentative forslag administrator justerer etterpå; eller (b) **to-trinns** —
-  administrator setter nødvendige ankre først, resten beregnes deretter.
+  tentativ uten selv å være valgårssensitiv. **Låst (designintervju 2026-06-19):** dette
+  skrives inn som en **eksplisitt beregningsregel** allerede i Steg C, kodet og testet fra
+  start.
+- **Genereringsflyt ved manuelt anker — låst til to-trinns (designintervju 2026-06-19).**
+  Flyten er ikke ren ett-knapps-generering når et anker må settes manuelt (valgårssensitivt
+  framleggings-anker): **administrator setter de nødvendige ankrene først, deretter beregnes
+  resten** fra de satte ankrene. Påvirker Steg F-flaten direkte (to trinn, ikke én knapp).
 
 ### Steg D — Videreføring av synlighet
 For hvert generert forslag slås fjorårets tilsvarende frist opp via `Loep` +
@@ -158,9 +156,13 @@ som standard.
 
 ### Steg E — Synlighetsregler
 Mekanisme som forhåndsutfyller `ForeslaattSynlighet` for forslag (gjelder også robot-/
-brukerforslag fra Fase 2). Regelen produserer **aldri** POL. Gjenbrukes av genereringen
-når fjorårsfrist mangler (Steg D). Lagringsform (konfig vs. tabell) besluttes her;
-anbefaling konfig-drevet (kap. 3).
+brukerforslag fra Fase 2). **Default-regelen er FIN-internt: FA + FIN-FAG** (designintervju
+2026-06-19) — **ikke** FAG og **aldri** POL automatisk. Admin legger til FAG aktivt når en
+frist faktisk angår fagdepartementene. Konsistent med v1 FIN-først (FAG kan uansett ikke
+autentiseres før IT åpner multi-tenant). Gjelder kun auto/robot-/genererte forslag —
+manuell oppretting krever fortsatt aktivt synlighetsvalg. Gjenbrukes av genereringen når
+fjorårsfrist mangler (Steg D). Lagringsform (konfig vs. tabell) besluttes her; anbefaling
+konfig-drevet (kap. 3).
 
 ### Steg F — Generér-flate (Web, admin)
 Egen side **adskilt fra godkjenningskøen** (jf. beslutningslogg 2026-06-18 «egen
@@ -230,11 +232,14 @@ xUnit mot SQLite in-memory + `WebApplicationFactory<Program>`, som fase 1 etable
   ellers tom synlighet. POL aldri stilltiende.
 - **Virkedagjustering:** nærmeste virkedag ved helg, men aldri over årsskifte.
 - **Regelparametre:** typede DTO-er mot eksisterende JSON-felt — ingen skjemaendring.
+- **Genereringsflyt ved manuelt anker (designintervju 2026-06-19):** **to-trinns** — admin
+  setter nødvendige valgårssensitive ankre først, deretter beregnes resten.
+- **Tentativ-arv (designintervju 2026-06-19):** kodes som **eksplisitt beregningsregel** i
+  Steg C fra start (arver ankerets presisjon, ikke bare dato).
+- **Synlighetsregel-default (designintervju 2026-06-19):** FIN-internt (FA + FIN-FAG),
+  ikke FAG, aldri POL automatisk; gjelder kun auto/robot-/genererte forslag.
 
 ## 9. Gjenstående åpne punkter (besluttes ved koding / loggføres da)
-- **Genereringsflyt ved manuelt anker:** én omgang (tentative forslag) vs. to-trinns.
-- **Tentativ-propagering:** kodes som eksplisitt regel i Steg C nå, eller avklares ved
-  koding.
 - **Kommunevalg-variantens styrke:** mild påminnelse vs. likt med stortingsvalg.
 - **Helligdager:** holdes utenfor i første omgang (kun helg) — utvides ved behov.
 - **Synlighetsregel-lagring:** konfig vs. egen tabell.

@@ -88,7 +88,17 @@ Sjekk hvert dokument mot registeret før forslag lages (SYSTEMARKITEKTUR 3.4):
 - `DokumentNokkel` (stabil, foreslås avledet av `r-{nr}-{aar}`, bekreftes), `InnholdHash`
   (hash av hentet PDF-tekst).
 - Kjent nøkkel + uendret hash → hopp over (også når fristene tidligere ble avvist).
-- Kjent nøkkel + ny hash → flagg «oppdatert versjon» til administrator, ikke dublett.
+- Kjent nøkkel + ny hash → **auto endringsforslag** (designintervju 2026-06-19): re-uttrekk
+  og lag `Forslag(Endring)` (`EndrerFristId` satt) mot de berørte publiserte fristene,
+  koblet via `Loep` + `Budsjettaar` + `DokumentId`, til admins gjennomgang i køen.
+  (Erstatter «flagg, ikke dublett» — passerer fortsatt køen, ingenting publiseres
+  uautorisert.)
+- **Forkastet-liste (designintervju 2026-06-19).** Et uttrekk som er **både** lav
+  konfidens **og** uten gjenkjennelig dato auto-forkastes — men **aldri stille**: det
+  havner i en synlig, reverserbar «forkastet»-liste admin kan gjennomgå, hente tilbake i
+  køen, eller slette. Sletting huskes på `(Kilde, DokumentNokkel)` så samme kilde ikke
+  gjenoppliver den; ny kilde/neste års dokument (ny nøkkel) kan komme inn på nytt. Krever
+  modelltillegg (reverserbar tilstand på `Forslag`/`BehandletDokument`).
 - **Bruk/utvid mellomtilstanden + forsøkstelleren (kap. 3)** for dokumenter som er
   oppdaget men ennå ikke ferdig hentet/uttrukket. Plassering (felt på
   `BehandletDokument` vs. egen arbeidskø) **avgjøres her** — begge oppfyller kravet.
@@ -102,16 +112,22 @@ men legges i køen som «ukjent type» (`Forslag` uten gjenkjent `Loep`/`Kategor
 
 ### Steg E — `hent()` + datouttrekk
 Last ned PDF, hent tekst, og bruk **språkmodell** til tolkning (kravdok. 4.4).
-Anbefaling: Claude API med nyeste, kapable modell; leverandør/SDK bekreftes i fasen
-(API: https://docs.claude.com/en/api/overview). Resultatet skrives som `Forslag`
-(`Opphav = Robot`, `DokumentId` satt) med per-felt `UttrekksBevis` (`TolketVerdi`,
-`Kildeutdrag`, `Konfidens`). Relative frister («ultimo mars») → utkast til
-gjentaksregel/`Datopresisjon = Maaned` (+ `Datokvalifikator`), ikke hard dato.
-**Kildeutdraget vises alltid** ved siden av tolket verdi i køen.
+**Abstraher uttrekket bak et `IDatouttrekk`-grensesnitt** (samme prinsipp som `IKilde`,
+designintervju 2026-06-19): tar PDF-tekst inn, leverer strukturert per-felt-resultat ut.
+Default Claude API i utvikling/test (API: https://docs.claude.com/en/api/overview);
+**endelig provider/lokasjon (ekstern Claude API vs. Azure-vertet) er et IT-styringsspørsmål**
+(kravdok. kap. 12) som byttes uten ombygging. Volum er bittelite, så kapabilitet vinner
+over kostnad. Resultatet skrives som `Forslag` (`Opphav = Robot`, `DokumentId` satt) med
+per-felt `UttrekksBevis` (`TolketVerdi`, `Kildeutdrag`, `Konfidens`). Relative frister
+(«ultimo mars») → utkast til gjentaksregel/`Datopresisjon = Maaned` (+ `Datokvalifikator`),
+ikke hard dato. **Kildeutdraget vises alltid** ved siden av tolket verdi i køen.
 **Usikkerhetsflagget styres av deterministiske, verifiserbare regler** i
 Application-laget (relativ→hard dato, kildespenn uten gjenkjennelig dato, brutt
 fornuftsregel som dato utenfor budsjettløpets vindu). `Konfidens` er ett bidrag,
-**aldri eneste utløser**.
+**aldri eneste utløser**. **Auto-forkast** (til forkastet-listen, Steg C) skjer kun når
+uttrekket er **både** lav konfidens **og** uten gjenkjennelig dato. **Uttrekksfeil/
+API-utfall:** retry et fast antall ganger (forsøksteller), så flagg til admin via
+liveness-sporet — aldri stille.
 
 ### Steg F — Godkjenningskøen (`Aarshjul.Web`, admin)
 Felles innboks (SYSTEMARKITEKTUR 6, kravdok. 5.1): enkeltkort gruppert per kilde, hver
@@ -200,9 +216,20 @@ form for bakgrunnsjobben; og hvor mellomtilstanden/forsøkstelleren havnet.
 Disse var åpne; de er nå besluttet slik at fase 2-kodingen kan starte uten å vente på
 flere avklaringer. Alle kan revideres ved behov (loggføres da i beslutningsloggen).
 
-- **Datouttrekk/LLM:** Claude API via offisiell SDK, nyeste kapable modell. Prompt
-  returnerer strukturert per-felt-resultat (felt, tolket verdi, kildeutdrag, konfidens)
-  som mappes til `UttrekksBevis`. Rundskrivene er offentlige → ingen personvernsperre.
+- **Datouttrekk/LLM (oppdatert designintervju 2026-06-19):** abstraheres bak et
+  `IDatouttrekk`-grensesnitt (samme prinsipp som `IKilde`). Default Claude API i
+  utvikling/test, nyeste kapable modell; prompt returnerer strukturert per-felt-resultat
+  (felt, tolket verdi, kildeutdrag, konfidens) som mappes til `UttrekksBevis`. **Endelig
+  provider/lokasjon (ekstern Claude API vs. Azure-vertet) er et IT-styringsspørsmål**
+  (kravdok. kap. 12) som byttes uten ombygging; rundskrivene er offentlige (ingen
+  personvernsperre), men en delt departementsløsning kan kreve uttrekk innenfor
+  Azure-grensen. **Uttrekksfeil:** retry til forsøksgrensen, så flagg admin (aldri stille).
+- **Auto-forkast / forkastet-liste (designintervju 2026-06-19):** auto-forkast kun ved
+  lav konfidens **og** ingen gjenkjennelig dato; aldri stille — reverserbar forkastet-liste
+  admin kan hente tilbake eller slette (sletting huskes på `(Kilde, DokumentNokkel)`).
+- **Oppdatert versjon (designintervju 2026-06-19):** kjent nøkkel + ny hash → auto
+  `Forslag(Endring)` mot berørte frister (via `Loep`+`Budsjettaar`+`DokumentId`), ikke et
+  rent varsel. Passerer køen.
 - **`DokumentNokkel` og hash:** `Kilde = "regjeringen"`, `DokumentNokkel` = normalisert
   `r-{nr}-{aar}` utledet fra PDF-URL (unik indeks (`Kilde`,`DokumentNokkel`) finnes
   allerede). `InnholdHash` = SHA-256 av hentet PDF-tekst. Eldre PDF-URL-variant prøves
