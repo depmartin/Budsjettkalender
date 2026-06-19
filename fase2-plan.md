@@ -10,6 +10,12 @@ fase 1-koden bor, og @.claude/rules/beslutningslogg.md for fremdrift og åpne fo
 Kravgrunnlag: @kravdokument-aarshjul-frister_v2.md kap. 4, 5, 8, 9.5;
 @SYSTEMARKITEKTUR.md kap. 3.2, 3.4, 5, 6, 9.
 
+> STATUS (PR #5, 94 tester grønt): **Kodet** — Steg A, D, F, G, H, I, J, K + `IDatouttrekk`-
+> forberedelse (`Aarshjul.Application/Datouttrekk`) + EF-migrasjon `Fase2Innhenting`.
+> **Blokkert til egress mot `www.regjeringen.no` åpnes** — Steg B (oppdagelse), C (dedup +
+> auto-versjonsmatching + «foreslått fjernet» + forkastet-liste), E (live `hent()`/
+> datouttrekk), L (bakgrunnsjobb). Disse krever live kilde; bygg dem først når egress er på plass.
+
 ---
 
 ## 1. Mål og avgrensning
