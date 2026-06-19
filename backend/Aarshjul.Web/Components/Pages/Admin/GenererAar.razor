@@ -1,0 +1,276 @@
+@page "/admin/generer"
+@using Aarshjul.Application.Generering
+@attribute [Authorize(Policy = Autorisasjon.ErAdministrator)]
+@inject IGenereringstjeneste Generering
+@inject IGodkjenningsko Ko
+@inject IGruppetjeneste Grupper
+@inject NavigationManager Nav
+
+<PageTitle>Generér budsjettår</PageTitle>
+
+<h1>Generér budsjettår</h1>
+
+<p class="melding">
+    Beregn fristene for et kommende budsjettår fra årsmalen. Forslagene legges her til gjennomgang —
+    ingenting publiseres før du godkjenner hvert enkelt. Synligheten videreføres fra fjorårets
+    godkjente frist (POL må alltid bekreftes aktivt).
+</p>
+
+<div class="filterpanel">
+    <label>Målbudsjettår
+        <input type="number" @bind="_maalaar" />
+    </label>
+    <button class="knapp knapp-primær" @onclick="Generer">Generér</button>
+</div>
+
+@if (_resultat is { } r)
+{
+    <p class="melding">
+        Genererte @r.AntallForslag forslag for budsjettår @r.Maalbudsjettaar.
+        @if (Valgaar.Type(_maalaar) is var vt && vt != Valgtype.Ingen)
+        {
+            <text> Merk: @VisValgtype(vt) i målåret — valgårssensitive frister er flagget.</text>
+        }
+    </p>
+
+    @if (r.Feil.Count > 0)
+    {
+        <div class="feil">
+            <strong>Kunne ikke beregne enkelte frister:</strong>
+            <ul>
+                @foreach (var f in r.Feil)
+                {
+                    <li>@f</li>
+                }
+            </ul>
+        </div>
+    }
+}
+
+@if (_lastet && _forslag.Count > 0)
+{
+    @if (_forslag.Any(f => f.Tentativ))
+    {
+        <section class="kildegruppe">
+            <h2>Manuelle ankre (to-trinns)</h2>
+            <p class="melding">
+                Tentative frister mangler en fastsatt dag (typisk valgårssensitive høstfrister).
+                Sett en dato her og beregn på nytt for å gjøre fristen og dens avhengige frister konkrete.
+            </p>
+            @foreach (var f in _forslag.Where(f => f.Tentativ && f.Loep is not null))
+            {
+                <div class="skjemarad">
+                    <label>@f.Tittel (@f.Loep)
+                        <input type="date" @bind="_ankre[f.Loep!]" />
+                    </label>
+                </div>
+            }
+            <button class="knapp" @onclick="BeregnPaaNytt">Beregn på nytt med satte ankre</button>
+        </section>
+    }
+
+    @foreach (var gruppe in _forslag.GroupBy(f => Visningformat.KategoriNavn(f.Kategori)))
+    {
+        <section class="kildegruppe">
+            <h2>@gruppe.Key</h2>
+            @foreach (var f in gruppe)
+            {
+                var t = Tilstand(f);
+                var godkjennBlokkert = f.Tentativ && !t.TentativBekreftet;
+                <article class="kort">
+                    <header class="kort-topp">
+                        <span class="merke">Generert</span>
+                        @if (f.Tentativ)
+                        {
+                            <span class="merke merke-tentativ">Tentativ</span>
+                        }
+                        @if (f.Valgaarsflagg)
+                        {
+                            <span class="merke merke-valgaar">Valgår</span>
+                        }
+                    </header>
+
+                    <h3>@f.Tittel</h3>
+                    <dl class="kort-felter">
+                        <div><dt>Ny dato</dt><dd>@FormatDato(f)</dd></div>
+                        <div><dt>Fjorårets dato</dt><dd>@(f.FjoraarDato?.ToString("dd.MM.yyyy") ?? "(ingen)")</dd></div>
+                        <div><dt>Kategori</dt><dd>@Visningformat.KategoriNavn(f.Kategori)</dd></div>
+                        <div><dt>Foreslått synlig for</dt>
+                            <dd>@(f.ForeslaattSynlighet.Count == 0 ? "(ingen)" : string.Join(", ", f.ForeslaattSynlighet))</dd></div>
+                    </dl>
+
+                    @if (t.Feil is not null)
+                    {
+                        <div class="feil">@t.Feil</div>
+                    }
+
+                    @if (t.Modus == Kortmodus.Godkjenn)
+                    {
+                        <fieldset class="synlighet">
+                            <legend>Velg synlighet (POL settes kun ved aktivt valg)</legend>
+                            @foreach (var grp in _grupper)
+                            {
+                                <label class="filtervalg @(grp.Kode == Pol ? "pol-valg" : "")">
+                                    <input type="checkbox"
+                                           checked="@t.Koder.Contains(grp.Kode)"
+                                           @onchange="ev => VekslKode(t, grp.Kode, (bool)ev.Value!)" />
+                                    @grp.Navn (@grp.Kode)
+                                </label>
+                            }
+                        </fieldset>
+                        @if (f.Tentativ)
+                        {
+                            <label class="filtervalg">
+                                <input type="checkbox" @bind="t.TentativBekreftet" />
+                                Jeg bekrefter å godkjenne fristen uten en fastsatt dag (tentativ).
+                            </label>
+                        }
+                        <div class="kort-handlinger">
+                            <button class="knapp knapp-primær"
+                                    disabled="@godkjennBlokkert"
+                                    @onclick="() => Godkjenn(f, t)">Bekreft godkjenning</button>
+                            <button class="knapp" @onclick="() => t.Modus = Kortmodus.Ingen">Avbryt</button>
+                        </div>
+                    }
+                    else if (t.Modus == Kortmodus.Avvis)
+                    {
+                        <label>Begrunnelse (valgfri)
+                            <textarea @bind="t.Begrunnelse" rows="2"></textarea>
+                        </label>
+                        <div class="kort-handlinger">
+                            <button class="knapp knapp-primær" @onclick="() => Avvis(f, t)">Bekreft avvisning</button>
+                            <button class="knapp" @onclick="() => t.Modus = Kortmodus.Ingen">Avbryt</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="kort-handlinger">
+                            <button class="knapp knapp-primær" @onclick="() => StartGodkjenn(f, t)">Godkjenn</button>
+                            <button class="knapp" @onclick='() => Nav.NavigateTo($"/admin/frist/juster/{f.ForslagId}")'>Juster</button>
+                            <button class="knapp" @onclick="() => t.Modus = Kortmodus.Avvis">Avvis</button>
+                        </div>
+                    }
+                </article>
+            }
+        </section>
+    }
+}
+else if (_lastet && _resultat is not null)
+{
+    <p class="melding">Ingen genererte forslag til gjennomgang for @_maalaar.</p>
+}
+
+@code {
+    private const string Pol = "POL";
+
+    private int _maalaar = DateTime.Today.Year + 1;
+    private GenereringsResultat? _resultat;
+    private IReadOnlyList<GenerertForslagDto> _forslag = [];
+    private IReadOnlyList<GruppeDto> _grupper = [];
+    private readonly Dictionary<Guid, Korttilstand> _tilstand = new();
+    private readonly Dictionary<string, DateOnly?> _ankre = new(StringComparer.OrdinalIgnoreCase);
+    private bool _lastet;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _grupper = await Grupper.HentAktiveAsync();
+    }
+
+    private async Task Generer()
+    {
+        _ankre.Clear();
+        _resultat = await Generering.GenererAsync(new GenereringsForespoersel(_maalaar));
+        await LastForslag();
+    }
+
+    private async Task BeregnPaaNytt()
+    {
+        var satte = _ankre
+            .Where(kv => kv.Value is not null)
+            .ToDictionary(kv => kv.Key, kv => kv.Value!.Value, StringComparer.OrdinalIgnoreCase);
+        _resultat = await Generering.GenererAsync(new GenereringsForespoersel(_maalaar, satte));
+        await LastForslag();
+    }
+
+    private async Task LastForslag()
+    {
+        _forslag = await Generering.HentGenererteAsync(_maalaar);
+        _tilstand.Clear();
+        _lastet = true;
+    }
+
+    private Korttilstand Tilstand(GenerertForslagDto f) =>
+        _tilstand.TryGetValue(f.ForslagId, out var t) ? t : _tilstand[f.ForslagId] = new Korttilstand();
+
+    private void StartGodkjenn(GenerertForslagDto f, Korttilstand t)
+    {
+        // Forhåndsutfyll foreslått synlighet, men aldri POL (settes kun ved aktivt valg).
+        t.Koder = f.ForeslaattSynlighet
+            .Where(k => !string.Equals(k, Pol, StringComparison.OrdinalIgnoreCase)).ToHashSet();
+        t.Feil = null;
+        t.Modus = Kortmodus.Godkjenn;
+    }
+
+    private void VekslKode(Korttilstand t, string kode, bool på)
+    {
+        if (på) t.Koder.Add(kode);
+        else t.Koder.Remove(kode);
+    }
+
+    private async Task Godkjenn(GenerertForslagDto f, Korttilstand t)
+    {
+        t.Feil = null;
+        try
+        {
+            await Ko.GodkjennAsync(new GodkjennInndata
+            {
+                ForslagId = f.ForslagId,
+                Synlighetskoder = t.Koder.ToList(),
+                PolBekreftet = t.Koder.Contains(Pol)
+            });
+            await LastForslag();
+        }
+        catch (Valideringsfeil e)
+        {
+            t.Feil = e.Message;
+        }
+    }
+
+    private async Task Avvis(GenerertForslagDto f, Korttilstand t)
+    {
+        t.Feil = null;
+        try
+        {
+            await Ko.AvvisAsync(f.ForslagId, string.IsNullOrWhiteSpace(t.Begrunnelse) ? null : t.Begrunnelse);
+            await LastForslag();
+        }
+        catch (Valideringsfeil e)
+        {
+            t.Feil = e.Message;
+        }
+    }
+
+    private static string FormatDato(GenerertForslagDto f)
+    {
+        if (f.Dato is not { } d) return "(ingen dato)";
+        return f.Tentativ ? $"{d:MMMM yyyy} (tentativ)" : d.ToString("dd.MM.yyyy");
+    }
+
+    private static string VisValgtype(Valgtype vt) => vt switch
+    {
+        Valgtype.Stortingsvalg => "stortingsvalg",
+        Valgtype.Kommunevalg => "kommunevalg",
+        _ => "ingen valg"
+    };
+
+    private enum Kortmodus { Ingen, Godkjenn, Avvis }
+
+    private sealed class Korttilstand
+    {
+        public Kortmodus Modus { get; set; } = Kortmodus.Ingen;
+        public HashSet<string> Koder { get; set; } = [];
+        public bool TentativBekreftet { get; set; }
+        public string? Begrunnelse { get; set; }
+        public string? Feil { get; set; }
+    }
+}

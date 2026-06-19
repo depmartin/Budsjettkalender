@@ -110,6 +110,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.Loep).HasMaxLength(128);
+            e.Property(x => x.Tittel).HasMaxLength(512);
         });
 
         // --- Varsel ---

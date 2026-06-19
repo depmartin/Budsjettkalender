@@ -11,6 +11,9 @@ public class Gjentaksregel
     /// <summary>Funksjonsnavn, f.eks. "rammefordeling", "marskonferanse".</summary>
     public required string Loep { get; set; }
 
+    /// <summary>Maltittel som blir fristens tittel ved generering (kan justeres per generert frist).</summary>
+    public string Tittel { get; set; } = "";
+
     public Kategori Kategori { get; set; }
 
     public Regeltype Regeltype { get; set; }

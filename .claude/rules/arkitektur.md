@@ -2,7 +2,7 @@
 
 Stabil teknisk referanse for prosjektet «Årshjul for budsjettfrister»: stack, mappestruktur og kommandoer. Endres sjelden. Designbeslutningene bak datamodellen står i `beslutningslogg.md`; brukerflate og roller i `../../BRUKERHISTORIER.md`; full systemarkitektur i `../../SYSTEMARKITEKTUR.md`.
 
-> STATUS: Fase 1 (fundament) ferdig (PR #1 merget). **Fase 2 — de offline-delbare stegene er kodet (PR #5): Steg A (kildeabstraksjon), D (totrinns filtrering), F (godkjenningskø), G (juster fra køen), H (brukerforslag), I (endringsforslag), J (varsel), K (Word-utskrift), pluss `IDatouttrekk`-forberedelse. 94 tester grønt på .NET 10.** Gjenstående Fase 2 (Steg B oppdagelse, C dedup/versjonsmatching, E live datouttrekk, L bakgrunnsjobb) er **blokkert** til `www.regjeringen.no` åpnes i miljøets egress-allowlist. Fase 3 (mal/generering) er ferdig planlagt (`fase3-plan.md`) og er neste kodetrinn — dens avhengigheter (Steg F/G) er nå på plass. Bekreftet stack: **.NET 10 (LTS) / ASP.NET Core + EF Core, Azure SQL, Blazor Web App (Interactive Server), Azure App Service**; bakgrunnsjobb = `BackgroundService` i web-hosten; datouttrekk bak `IDatouttrekk` (default Claude API, lokasjon IT-avklart). Se beslutningsloggen for full fremdrift og åpne forhold.
+> STATUS: Fase 1 (fundament) ferdig. **Fase 2 — offline-delbare steg kodet** (A/D/F/G/H/I/J/K + `IDatouttrekk`-forberedelse). **Fase 3 (mal og generering) KODET 2026-06-19 (Steg A–G): `Datoberegning` (FastDato/NteUkedag/Virkedagjuster) + `Valgaar`, typede regelparametre + `Regelparser`, `Genereringsberegning` (anker-kjeder/sirkularitet/tentativ-arv/valgår), `GenereringsTjeneste` (videreføring av synlighet), konfig-drevet `Synlighetsregel`, `Maltjeneste`, og admin-flatene `/admin/generer` + `/admin/mal`. EF-migrasjon `Fase3Generering` (la til `Gjentaksregel.Tittel`). 125 tester grønt på .NET 10.** Gjenstående Fase 2 (Steg B oppdagelse, C dedup/versjonsmatching, E live datouttrekk, L bakgrunnsjobb) er **blokkert** til `www.regjeringen.no` åpnes i egress-allowlisten. **MERK:** koden ligger foreløpig kun på gren `claude/cool-clarke-vm4uoi`; `main` har kun dokumenter. Bekreftet stack: **.NET 10 (LTS) / ASP.NET Core + EF Core, Azure SQL, Blazor Web App (Interactive Server), Azure App Service**; bakgrunnsjobb = `BackgroundService` i web-hosten; datouttrekk bak `IDatouttrekk` (default Claude API, lokasjon IT-avklart). Se beslutningsloggen for full fremdrift og åpne forhold.
 
 ## Teknologistabel
 
@@ -57,7 +57,7 @@ sudo apt-get install -y dotnet-sdk-10.0
 Solution: `backend/Aarshjul.slnx` (.slnx — det nye XML-formatet i .NET 10).
 
 - Bygg: `dotnet build backend/Aarshjul.slnx`
-- Test (alle): `dotnet test backend/Aarshjul.slnx` — 23 tester (synlighet, datoberegning, innlegging, claims, HTTP-integrasjon).
+- Test (alle): `dotnet test backend/Aarshjul.slnx` — 125 tester (synlighet, datoberegning, innlegging, claims, HTTP-integrasjon, godkjenningskø, brukerforslag, Word-eksport, generering/valgår/anker-kjeder).
 - Kjør appen lokalt: `dotnet run --project backend/Aarshjul.Web` (krever DB + Entra-konfig; se appsettings).
 - EF-migrasjon (ny): `dotnet ef migrations add <Navn> --project backend/Aarshjul.Infrastructure --startup-project backend/Aarshjul.Infrastructure` (Infrastructure har en `AppDbContextFactory` for design-time).
 - EF-migrasjon (oppdater db): `dotnet ef database update --project backend/Aarshjul.Infrastructure --startup-project backend/Aarshjul.Infrastructure`

@@ -19,10 +19,12 @@ public class GodkjenningskoTjeneste(AppDbContext db) : IGodkjenningsko
 
     public async Task<IReadOnlyList<Koelement>> HentKoAsync(Kofilter? filter = null, CancellationToken ct = default)
     {
+        // Genererte forslag behandles på sin egen generér-flate, adskilt fra den løpende køen
+        // (beslutning 2026-06-18). De utelates derfor her.
         var forslag = await db.Forslag
             .AsNoTracking()
             .Include(f => f.UttrekksBevis)
-            .Where(f => f.Status == FristStatus.Forslag)
+            .Where(f => f.Status == FristStatus.Forslag && f.ForslagType != ForslagType.Generert)
             .ToListAsync(ct);
 
         // Endringsforslag viser før/etter — hent gjeldende verdier for de berørte fristene.
