@@ -25,6 +25,7 @@
     <ProjectReference Include="..\Aarshjul.Application\Aarshjul.Application.csproj" />
     <ProjectReference Include="..\Aarshjul.Infrastructure\Aarshjul.Infrastructure.csproj" />
     <ProjectReference Include="..\Aarshjul.Web\Aarshjul.Web.csproj" />
+    <ProjectReference Include="..\kilder\Aarshjul.Kilder.csproj" />
   </ItemGroup>
 
 </Project>

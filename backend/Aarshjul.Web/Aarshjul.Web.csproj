@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Aarshjul.Application\Aarshjul.Application.csproj" />
     <ProjectReference Include="..\Aarshjul.Infrastructure\Aarshjul.Infrastructure.csproj" />
+    <ProjectReference Include="..\kilder\Aarshjul.Kilder.csproj" />
   </ItemGroup>
 
   <ItemGroup>
