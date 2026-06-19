@@ -9,6 +9,7 @@
             <NavLink href="/aarshjul">Årshjul</NavLink>
             <AuthorizeView Policy="@Autorisasjon.KanForeslaa">
                 <NavLink href="/forslag/mine">Mine forslag</NavLink>
+                <VarselTeller />
             </AuthorizeView>
             <AuthorizeView Policy="@Autorisasjon.ErAdministrator">
                 <NavLink href="/admin/ko">Kø</NavLink>

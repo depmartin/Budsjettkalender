@@ -1,0 +1,70 @@
+@page "/varsler"
+@attribute [Authorize(Policy = Autorisasjon.KanForeslaa)]
+@inject IVarseltjeneste Varsler
+@inject Gjeldendebrukerkilde Brukerkilde
+
+<PageTitle>Varsler</PageTitle>
+
+<div class="admintopp">
+    <h1>Varsler</h1>
+    @if (_varsler.Any(v => !v.Lest))
+    {
+        <button class="knapp" @onclick="MarkerAlle">Marker alle som lest</button>
+    }
+</div>
+
+@if (!_lastet)
+{
+    <p class="melding">Laster …</p>
+}
+else if (_varsler.Count == 0)
+{
+    <p class="melding">Du har ingen varsler.</p>
+}
+else
+{
+    <ul class="varselliste">
+        @foreach (var v in _varsler)
+        {
+            <li class="varsel @(v.Lest ? "lest" : "ulest")" @onclick="() => MarkerLest(v)">
+                <div class="varsel-tekst">@v.Tekst</div>
+                @if (!string.IsNullOrWhiteSpace(v.Begrunnelse))
+                {
+                    <div class="varsel-begrunnelse">@v.Begrunnelse</div>
+                }
+                <div class="varsel-tid">@v.Opprettet.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</div>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private IReadOnlyList<VarselDto> _varsler = [];
+    private string _brukerId = "";
+    private bool _lastet;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _brukerId = (await Brukerkilde.HentAsync()).Id;
+        await LastAsync();
+    }
+
+    private async Task LastAsync()
+    {
+        _varsler = await Varsler.HentForBrukerAsync(_brukerId);
+        _lastet = true;
+    }
+
+    private async Task MarkerLest(VarselDto v)
+    {
+        if (v.Lest) return;
+        await Varsler.MarkerLestAsync(v.Id, _brukerId);
+        await LastAsync();
+    }
+
+    private async Task MarkerAlle()
+    {
+        await Varsler.MarkerAlleLestAsync(_brukerId);
+        await LastAsync();
+    }
+}
