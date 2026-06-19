@@ -155,14 +155,42 @@ public class GodkjenningskoTester : IDisposable
         // Original uendret før godkjenning.
         Assert.Equal("Gammel tittel", (await _t.Db.Frister.AsNoTracking().SingleAsync(f => f.Id == frist.Id)).Tittel);
 
-        await Tjeneste().GodkjennAsync(new GodkjennInndata { ForslagId = forslagId, Synlighetskoder = ["FA", "FIN-FAG"] });
+        // Endringsforslag sender ingen synlighet (rører kun innhold).
+        await Tjeneste().GodkjennAsync(new GodkjennInndata { ForslagId = forslagId, Synlighetskoder = [] });
 
         var oppdatert = await _t.Db.Frister.AsNoTracking().Include(f => f.Synlighet).SingleAsync(f => f.Id == frist.Id);
         Assert.Equal("Hovedbudsjettskriv", oppdatert.Tittel);
         Assert.Equal(new DateOnly(2027, 4, 1), oppdatert.Dato);
-        Assert.Equal(["FA", "FIN-FAG"], oppdatert.Synlighet.Select(s => s.GruppeKode).OrderBy(k => k));
+        // Synligheten står uendret — endringsforslag rører aldri synlig_for.
+        Assert.Equal(["FA"], oppdatert.Synlighet.Select(s => s.GruppeKode));
         // Ingen ny frist opprettet.
         Assert.Equal(1, await _t.Db.Frister.CountAsync());
+    }
+
+    [Fact]
+    public async Task Godkjent_endringsforslag_endrer_innhold_men_lar_synlig_for_staa_uendret()
+    {
+        // Publisert frist synlig for FA + POL.
+        var frist = new Frist
+        {
+            Id = Guid.NewGuid(), Tittel = "Opprinnelig", Dato = new DateOnly(2027, 3, 15),
+            Budsjettaar = 2028, Kategori = Kategori.Budsjett, Status = FristStatus.Godkjent, Opphav = Opphav.Admin
+        };
+        frist.Synlighet.Add(new FristSynlighet { GruppeKode = "FA" });
+        frist.Synlighet.Add(new FristSynlighet { GruppeKode = "POL" });
+        _t.Db.Frister.Add(frist);
+        _t.Db.SaveChanges();
+
+        var forslagId = LeggForslag(opphav: Opphav.Bruker, kilde: "bruker-7",
+            type: ForslagType.Endring, endrerFristId: frist.Id, dato: new DateOnly(2027, 5, 2));
+
+        // Et endringsforslag krever ingen synlighetskoder ved godkjenning, og POL berøres ikke.
+        await Tjeneste().GodkjennAsync(new GodkjennInndata { ForslagId = forslagId, Synlighetskoder = [] });
+
+        var oppdatert = await _t.Db.Frister.AsNoTracking().Include(f => f.Synlighet).SingleAsync(f => f.Id == frist.Id);
+        Assert.Equal("Hovedbudsjettskriv", oppdatert.Tittel);
+        Assert.Equal(new DateOnly(2027, 5, 2), oppdatert.Dato);
+        Assert.Equal(["FA", "POL"], oppdatert.Synlighet.Select(s => s.GruppeKode).OrderBy(k => k));
     }
 
     [Fact]

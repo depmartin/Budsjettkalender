@@ -80,24 +80,26 @@ public class GodkjenningskoTjeneste(AppDbContext db) : IGodkjenningsko
             .FirstOrDefaultAsync(f => f.Id == inndata.ForslagId && f.Status == FristStatus.Forslag, ct)
             ?? throw new Valideringsfeil("Forslaget finnes ikke eller er allerede behandlet.");
 
-        var koder = await ValiderSynlighetAsync(inndata.Synlighetskoder, inndata.PolBekreftet, ct);
-
         if (forslag.Dato is not { } dato)
             throw new Valideringsfeil("Forslaget mangler dato. Juster forslaget og sett en dato før godkjenning.");
 
         Guid fristId;
         if (forslag.ForslagType == ForslagType.Endring && forslag.EndrerFristId is { } endrerId)
         {
-            var frist = await db.Frister.Include(f => f.Synlighet)
+            // Endringsforslag rører kun innhold — fristens synlig_for står urørt. Derfor ingen
+            // synlighetsvalidering og ingen oppdatering av synlighet her (synlighet er admins
+            // domene og POL-sensitivt; det styres aldri via et endringsforslag).
+            var frist = await db.Frister
                 .FirstOrDefaultAsync(f => f.Id == endrerId, ct)
                 ?? throw new Valideringsfeil("Fristen som skulle endres finnes ikke.");
 
             SettFristfelter(frist, forslag, dato);
-            OppdaterSynlighet(frist, koder);
             fristId = frist.Id;
         }
         else
         {
+            var koder = await ValiderSynlighetAsync(inndata.Synlighetskoder, inndata.PolBekreftet, ct);
+
             var frist = new Frist
             {
                 Id = Guid.NewGuid(),
@@ -144,16 +146,6 @@ public class GodkjenningskoTjeneste(AppDbContext db) : IGodkjenningsko
         frist.Kategori = forslag.Kategori;
         frist.Loep = string.IsNullOrWhiteSpace(forslag.Loep) ? null : forslag.Loep.Trim();
         frist.Notat = string.IsNullOrWhiteSpace(forslag.Notat) ? null : forslag.Notat.Trim();
-    }
-
-    private static void OppdaterSynlighet(Frist frist, List<string> koder)
-    {
-        var ønsket = koder.ToHashSet();
-        foreach (var utgår in frist.Synlighet.Where(s => !ønsket.Contains(s.GruppeKode)).ToList())
-            frist.Synlighet.Remove(utgår);
-        var finnes = frist.Synlighet.Select(s => s.GruppeKode).ToHashSet();
-        foreach (var kode in koder.Where(k => !finnes.Contains(k)))
-            frist.Synlighet.Add(new FristSynlighet { FristId = frist.Id, GruppeKode = kode });
     }
 
     private void VarsleVedBrukerforslag(Forslag forslag, string tekst, string? begrunnelse)

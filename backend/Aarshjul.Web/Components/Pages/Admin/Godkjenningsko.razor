@@ -72,8 +72,11 @@ else
                         {
                             <div><dt>Løp</dt><dd>@e.Loep</dd></div>
                         }
-                        <div><dt>Foreslått synlig for</dt>
-                            <dd>@(e.ForeslaattSynlighet.Count == 0 ? "(ingen)" : string.Join(", ", e.ForeslaattSynlighet))</dd></div>
+                        @if (e.ForslagType != ForslagType.Endring)
+                        {
+                            <div><dt>Foreslått synlig for</dt>
+                                <dd>@(e.ForeslaattSynlighet.Count == 0 ? "(ingen)" : string.Join(", ", e.ForeslaattSynlighet))</dd></div>
+                        }
                     </dl>
 
                     @if (!string.IsNullOrWhiteSpace(e.Notat))
@@ -114,18 +117,25 @@ else
 
                     @if (t.Modus == Kortmodus.Godkjenn)
                     {
-                        <fieldset class="synlighet">
-                            <legend>Velg synlighet (POL settes kun ved aktivt valg)</legend>
-                            @foreach (var grp in _grupper)
-                            {
-                                <label class="filtervalg @(grp.Kode == Pol ? "pol-valg" : "")">
-                                    <input type="checkbox"
-                                           checked="@t.Koder.Contains(grp.Kode)"
-                                           @onchange="ev => VekslKode(t, grp.Kode, (bool)ev.Value!)" />
-                                    @grp.Navn (@grp.Kode)
-                                </label>
-                            }
-                        </fieldset>
+                        @if (e.ForslagType == ForslagType.Endring)
+                        {
+                            <p class="melding">Synligheten på fristen står uendret — et endringsforslag rører kun innholdet.</p>
+                        }
+                        else
+                        {
+                            <fieldset class="synlighet">
+                                <legend>Velg synlighet (POL settes kun ved aktivt valg)</legend>
+                                @foreach (var grp in _grupper)
+                                {
+                                    <label class="filtervalg @(grp.Kode == Pol ? "pol-valg" : "")">
+                                        <input type="checkbox"
+                                               checked="@t.Koder.Contains(grp.Kode)"
+                                               @onchange="ev => VekslKode(t, grp.Kode, (bool)ev.Value!)" />
+                                        @grp.Navn (@grp.Kode)
+                                    </label>
+                                }
+                            </fieldset>
+                        }
                         <div class="kort-handlinger">
                             <button class="knapp knapp-primær" @onclick="() => Godkjenn(e, t)">Bekreft godkjenning</button>
                             <button class="knapp" @onclick="() => t.Modus = Kortmodus.Ingen">Avbryt</button>
@@ -193,8 +203,11 @@ else
 
     private void StartGodkjenn(Koelement e, Korttilstand t)
     {
-        // Forhåndsutfyll med foreslått synlighet, men ALDRI POL (settes kun ved aktivt valg).
-        t.Koder = e.ForeslaattSynlighet.Where(k => !string.Equals(k, Pol, StringComparison.OrdinalIgnoreCase)).ToHashSet();
+        // Endringsforslag rører ikke synlighet; for nye/genererte forslag forhåndsutfylles
+        // foreslått synlighet, men ALDRI POL (settes kun ved aktivt valg).
+        t.Koder = e.ForslagType == ForslagType.Endring
+            ? []
+            : e.ForeslaattSynlighet.Where(k => !string.Equals(k, Pol, StringComparison.OrdinalIgnoreCase)).ToHashSet();
         t.Feil = null;
         t.Modus = Kortmodus.Godkjenn;
     }
@@ -210,11 +223,12 @@ else
         t.Feil = null;
         try
         {
+            // Endringsforslag sender ingen synlighet — fristens synlig_for står uendret (håndheves i tjenesten).
             await Ko.GodkjennAsync(new GodkjennInndata
             {
                 ForslagId = e.Id,
-                Synlighetskoder = t.Koder.ToList(),
-                PolBekreftet = t.Koder.Contains(Pol)
+                Synlighetskoder = e.ForslagType == ForslagType.Endring ? [] : t.Koder.ToList(),
+                PolBekreftet = e.ForslagType != ForslagType.Endring && t.Koder.Contains(Pol)
             });
             await LastAsync();
         }

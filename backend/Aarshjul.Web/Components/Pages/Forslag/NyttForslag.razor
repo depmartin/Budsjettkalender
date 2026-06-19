@@ -1,19 +1,33 @@
 @page "/forslag/ny"
 @page "/forslag/{Id:guid}/rediger"
+@page "/forslag/endre/{FristId:guid}"
 @attribute [Authorize(Policy = Autorisasjon.KanForeslaa)]
 @inject IForslagsinnsending Innsending
+@inject IFristlesing Fristlesing
 @inject IGruppetjeneste Grupper
 @inject Gjeldendebrukerkilde Brukerkilde
+@inject Synlighetskontekstkilde Kontekstkilde
 @inject NavigationManager Nav
 
-<PageTitle>@(Id is null ? "Nytt forslag" : "Rediger forslag")</PageTitle>
+<PageTitle>@Tittel</PageTitle>
 
-<h1>@(Id is null ? "Foreslå en frist" : "Rediger og send inn på nytt")</h1>
+<h1>@Tittel</h1>
 
-<p class="melding">
-    Forslaget går til administrators godkjenningskø og er usynlig for andre til det er godkjent.
-    Synlighet er kun et forslag administrator beslutter endelig.
-</p>
+@if (ErEndre)
+{
+    <p class="melding">
+        Du foreslår en endring på en publisert frist. Forslaget går til administrators
+        godkjenningskø; originalfristen — inkludert hvem den er synlig for — står uendret til
+        administrator godkjenner. Et endringsforslag rører kun innholdet, ikke synligheten.
+    </p>
+}
+else
+{
+    <p class="melding">
+        Forslaget går til administrators godkjenningskø og er usynlig for andre til det er godkjent.
+        Synlighet er kun et forslag administrator beslutter endelig.
+    </p>
+}
 
 @if (!_lastet)
 {
@@ -21,7 +35,11 @@
 }
 else if (_inndata is null)
 {
-    <p class="melding">Forslaget finnes ikke, eller kan ikke redigeres.</p>
+    <p class="melding">
+        @(ErEndre
+            ? "Fristen finnes ikke, eller du har ikke tilgang til den."
+            : "Forslaget finnes ikke, eller kan ikke redigeres.")
+    </p>
 }
 else
 {
@@ -75,18 +93,21 @@ else
             <textarea @bind="_inndata.Notat" rows="2"></textarea>
         </label>
 
-        <fieldset class="synlighet">
-            <legend>Foreslått synlig for (valgfritt – administrator beslutter endelig)</legend>
-            @foreach (var gruppe in _grupper)
-            {
-                <label class="filtervalg @(gruppe.Kode == "POL" ? "pol-valg" : "")">
-                    <input type="checkbox"
-                           checked="@_inndata.ForeslaattSynlighet.Contains(gruppe.Kode)"
-                           @onchange="e => VekslGruppe(gruppe.Kode, (bool)e.Value!)" />
-                    @gruppe.Navn (@gruppe.Kode)
-                </label>
-            }
-        </fieldset>
+        @if (!ErEndre)
+        {
+            <fieldset class="synlighet">
+                <legend>Foreslått synlig for (valgfritt – administrator beslutter endelig)</legend>
+                @foreach (var gruppe in _grupper)
+                {
+                    <label class="filtervalg @(gruppe.Kode == "POL" ? "pol-valg" : "")">
+                        <input type="checkbox"
+                               checked="@_inndata.ForeslaattSynlighet.Contains(gruppe.Kode)"
+                               @onchange="e => VekslGruppe(gruppe.Kode, (bool)e.Value!)" />
+                        @gruppe.Navn (@gruppe.Kode)
+                    </label>
+                }
+            </fieldset>
+        }
 
         <div class="skjemarad">
             <button type="submit" class="knapp knapp-primær">Send inn</button>
@@ -97,6 +118,7 @@ else
 
 @code {
     [Parameter] public Guid? Id { get; set; }
+    [Parameter] public Guid? FristId { get; set; }
 
     private BrukerforslagInndata? _inndata;
     private IReadOnlyList<GruppeDto> _grupper = [];
@@ -105,12 +127,43 @@ else
     private string? _feil;
     private bool _lastet;
 
+    private bool ErEndre => FristId is not null;
+
+    private string Tittel => FristId is not null
+        ? "Foreslå endring på en publisert frist"
+        : Id is null ? "Foreslå en frist" : "Rediger og send inn på nytt";
+
     protected override async Task OnInitializedAsync()
     {
         _grupper = await Grupper.HentAktiveAsync();
         _bruker = await Brukerkilde.HentAsync();
 
-        if (Id is null)
+        if (FristId is { } fristId)
+        {
+            // Endre-modus: forhåndsutfyll innholdsfeltene fra den publiserte fristen (kun hvis
+            // brukeren har rett til å se den — synlighet håndheves på server). Synlighet røres ikke.
+            var ctx = await Kontekstkilde.HentAsync();
+            var frist = await Fristlesing.HentEnAsync(ctx, fristId);
+            if (frist is not null)
+            {
+                _inndata = new BrukerforslagInndata
+                {
+                    Tittel = frist.Tittel,
+                    Dato = frist.Dato,
+                    Datopresisjon = frist.Datopresisjon,
+                    Datokvalifikator = frist.Datokvalifikator,
+                    Budsjettaar = frist.Budsjettaar,
+                    Kategori = frist.Kategori,
+                    Notat = frist.Notat,
+                    EndrerFristId = fristId
+                };
+                if (frist.Datokvalifikator is { } kv)
+                {
+                    _kvalifikator = kv.ToString();
+                }
+            }
+        }
+        else if (Id is null)
         {
             _inndata = new BrukerforslagInndata();
         }

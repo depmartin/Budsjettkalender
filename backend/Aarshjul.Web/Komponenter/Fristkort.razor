@@ -27,6 +27,12 @@
             }
         </div>
     }
+
+    <AuthorizeView Policy="@Autorisasjon.KanForeslaa">
+        <div class="fristkort-handlinger">
+            <a class="fristkort-foreslaa" href="@($"/forslag/endre/{Frist.Id}")">Foreslå endring</a>
+        </div>
+    </AuthorizeView>
 </div>
 
 @code {
