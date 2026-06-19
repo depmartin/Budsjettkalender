@@ -48,6 +48,7 @@ builder.Services.AddScoped<IBrukeroppslag, BrukeroppslagTjeneste>();
 builder.Services.AddScoped<ISynlighetskontekst, HttpSynlighetskontekst>();
 builder.Services.AddScoped<IClaimsTransformation, BrukerClaimsTransformation>();
 builder.Services.AddScoped<Synlighetskontekstkilde>();
+builder.Services.AddScoped<Gjeldendebrukerkilde>();
 builder.Services.AddScoped<Visningstilstand>();
 
 // --- Autentisering (Entra ID). Utelates i testmiljø; testene injiserer egen ordning. ---

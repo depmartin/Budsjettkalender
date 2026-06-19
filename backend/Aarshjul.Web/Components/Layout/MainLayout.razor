@@ -7,6 +7,9 @@
             <NavLink href="/" Match="NavLinkMatch.All">Nå</NavLink>
             <NavLink href="/kalender">Kalender</NavLink>
             <NavLink href="/aarshjul">Årshjul</NavLink>
+            <AuthorizeView Policy="@Autorisasjon.KanForeslaa">
+                <NavLink href="/forslag/mine">Mine forslag</NavLink>
+            </AuthorizeView>
             <AuthorizeView Policy="@Autorisasjon.ErAdministrator">
                 <NavLink href="/admin/ko">Kø</NavLink>
                 <NavLink href="/admin/frister">Frister</NavLink>
