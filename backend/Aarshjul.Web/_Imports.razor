@@ -1,4 +1,12 @@
 @* Prosjektomfattende usings (gjelder også komponenter utenfor Components/). *@
+@* Web-namespacet gir event-direktivene (@onchange/@onclick osv.). Uten det tolker Razor
+   dem som bokstavelige attributter — kritisk for komponenter i Komponenter/ som ikke dekkes
+   av Components/_Imports.razor. *@
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using Aarshjul.Domain

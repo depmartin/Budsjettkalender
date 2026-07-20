@@ -10,11 +10,13 @@ fase 1-koden bor, og @.claude/rules/beslutningslogg.md for fremdrift og åpne fo
 Kravgrunnlag: @kravdokument-aarshjul-frister_v2.md kap. 4, 5, 8, 9.5;
 @SYSTEMARKITEKTUR.md kap. 3.2, 3.4, 5, 6, 9.
 
-> STATUS (PR #5, 94 tester grønt): **Kodet** — Steg A, D, F, G, H, I, J, K + `IDatouttrekk`-
-> forberedelse (`Aarshjul.Application/Datouttrekk`) + EF-migrasjon `Fase2Innhenting`.
-> **Blokkert til egress mot `www.regjeringen.no` åpnes** — Steg B (oppdagelse), C (dedup +
-> auto-versjonsmatching + «foreslått fjernet» + forkastet-liste), E (live `hent()`/
-> datouttrekk), L (bakgrunnsjobb). Disse krever live kilde; bygg dem først når egress er på plass.
+> STATUS: **Kodet** — Steg A, D, F, G, H, I, J, K + `IDatouttrekk`-forberedelse
+> (`Aarshjul.Application/Datouttrekk`) + EF-migrasjon `Fase2Innhenting`. **Steg B (oppdagelse/
+> parsing) KODET 2026-07-20 offline mot fixtur** (`RegjeringenParser` + `RegjeringenKilde`,
+> AngleSharp, 139 tester grønt). **Gjenstår, blokkert av Cloudflare på `www.regjeringen.no`** (egress
+> er åpnet, men verten svarer 403 «challenge» på ikke-nettleserklienter): live `OppdagAsync`/
+> `HentAsync`, Steg C (dedup + auto-versjonsmatching + «foreslått fjernet» + forkastet-liste),
+> E (live datouttrekk), L (bakgrunnsjobb). Krever IT-avklaring om Cloudflare-tilgang. Se beslutningsloggen.
 
 ---
 

@@ -3,10 +3,12 @@
   <ItemGroup>
     <ProjectReference Include="..\Aarshjul.Domain\Aarshjul.Domain.csproj" />
     <ProjectReference Include="..\Aarshjul.Application\Aarshjul.Application.csproj" />
+    <ProjectReference Include="..\kilder\Aarshjul.Kilder.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="DocumentFormat.OpenXml" Version="3.5.1" />
+    <PackageReference Include="PdfPig" Version="0.1.15" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
