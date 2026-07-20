@@ -39,6 +39,12 @@ var erTesting = builder.Environment.IsEnvironment("Testing");
 var erDemo = builder.Environment.IsEnvironment("Demo");
 var brukEntra = !erTesting && !erDemo;
 
+// Static web assets (blazor.web.js, scoped CSS) lastes automatisk kun i miljøet Development.
+// Demo er et eget miljø, så vi må be om dev-tidens manifest eksplisitt — ellers kobler ikke
+// Blazor-kretsen opp (interaktivitet dør) og scoped CSS mangler. Rører ikke produksjon.
+if (erDemo)
+    builder.WebHost.UseStaticWebAssets();
+
 // --- Database. Produksjon: Azure SQL. Demo: SQLite-fil. Test: registreres av testene. ---
 if (erDemo)
 {
