@@ -14,13 +14,25 @@ manuelt for å se hele innhentingspipelinen.
 
 ## Start
 
+**Linux/macOS (bash/zsh):**
 ```bash
-ASPNETCORE_ENVIRONMENT=Demo dotnet run --project backend/Aarshjul.Web
+ASPNETCORE_ENVIRONMENT=Demo dotnet run --project backend/Aarshjul.Web --no-launch-profile
 ```
 
-Åpne så adressen appen skriver ut (typisk `http://localhost:5xxx`). Første gang
-opprettes en lokal SQLite-fil (`aarshjul-demo.db`, git-ignorert) med demodata.
-Vil du nullstille, slett filen og start på nytt.
+**Windows (PowerShell):**
+```powershell
+$env:ASPNETCORE_ENVIRONMENT="Demo"; dotnet run --project backend/Aarshjul.Web --no-launch-profile
+```
+
+`--no-launch-profile` er **nødvendig**: uten det overstyrer `launchSettings.json`
+miljøvariabelen med `Development`, og appen prøver å koble til Azure SQL i stedet
+for demo-databasen (feiler med «The ConnectionString property has not been
+initialized»).
+
+Appen stopper opp med `Now listening on: http://localhost:5000` — det betyr at den
+kjører (ikke lukk vinduet). Åpne så `http://localhost:5000/demo` i nettleseren.
+Første gang opprettes en lokal SQLite-fil (`aarshjul-demo.db`, git-ignorert) med
+demodata. Vil du nullstille, stopp appen (Ctrl+C), slett filen og start på nytt.
 
 ## Logg inn
 
