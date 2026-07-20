@@ -1,0 +1,142 @@
+@page "/admin/last-opp"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = Autorisasjon.ErAdministrator)]
+@using Aarshjul.Application.Opplasting
+@inject IOpplasting Opplasting
+
+<PageTitle>Last opp rundskriv</PageTitle>
+
+<h1>Last opp rundskriv manuelt</h1>
+<p class="ingress">
+    Last opp en rundskriv-PDF for å kjøre den gjennom den vanlige innhentingspipelinen —
+    dedup, filtrering og datouttrekk — slik at et forslag havner i
+    <a href="/admin/ko">godkjenningskøen</a>. Ingenting publiseres direkte; alt passerer din
+    gjennomgang. Nyttig når den automatiske innhentingen ikke når kilden.
+</p>
+
+<div class="skjema">
+    <div class="skjemarad">
+        <label>Nummer (valgfritt)
+            <input type="number" @bind="_nummer" placeholder="f.eks. 4" />
+        </label>
+        <label>Budsjettår (valgfritt)
+            <input type="number" @bind="_budsjettaar" placeholder="f.eks. 2027" />
+        </label>
+    </div>
+    <label>Tittel (valgfritt – overstyrer uttrukket tittel)
+        <input type="text" @bind="_tittel" placeholder="La stå tom for å bruke tittel fra PDF-en" />
+    </label>
+
+    <label>PDF-fil
+        <InputFile OnChange="VelgFil" accept=".pdf" />
+    </label>
+
+    @if (_valgtFilnavn is not null)
+    {
+        <p class="melding">Valgt fil: <strong>@_valgtFilnavn</strong> (@_valgtStorrelse)</p>
+    }
+
+    <button class="knapp knapp-primær" @onclick="KjorOpplasting" disabled="@(_pdf is null || _jobber)">
+        @(_jobber ? "Behandler …" : "Last opp og kjør pipeline")
+    </button>
+</div>
+
+@if (_feil is not null)
+{
+    <p class="melding melding-feil">@_feil</p>
+}
+
+@if (_resultat is not null)
+{
+    <div class="resultatkort">
+        <h2>@Overskrift(_resultat.Utfall)</h2>
+        <p>@_resultat.Melding</p>
+        @if (_resultat.ErUkjentType)
+        {
+            <p class="melding">Merket «ukjent type» — velg kategori/løp ved vurdering i køen.</p>
+        }
+        @if (_resultat.HarUsikkerhetsflagg)
+        {
+            <p class="melding">Uttrekket har usikkerhetsflagg — kontroller de flaggede feltene i køen.</p>
+        }
+        @if (_resultat.ForslagId is not null)
+        {
+            <a class="knapp" href="/admin/ko">Gå til godkjenningskøen</a>
+        }
+    </div>
+}
+
+@code {
+    private int? _nummer;
+    private int? _budsjettaar;
+    private string? _tittel;
+
+    private byte[]? _pdf;
+    private string? _valgtFilnavn;
+    private string? _valgtStorrelse;
+
+    private bool _jobber;
+    private string? _feil;
+    private Opplastingsresultat? _resultat;
+
+    // Rundskriv-PDF-er er små; 25 MB er rundhåndet tak mot utilsiktet store opplastinger.
+    private const long MaksStorrelse = 25 * 1024 * 1024;
+
+    private async Task VelgFil(InputFileChangeEventArgs e)
+    {
+        _feil = null;
+        _resultat = null;
+        var fil = e.File;
+        try
+        {
+            using var strøm = fil.OpenReadStream(MaksStorrelse);
+            using var minne = new MemoryStream();
+            await strøm.CopyToAsync(minne);
+            _pdf = minne.ToArray();
+            _valgtFilnavn = fil.Name;
+            _valgtStorrelse = $"{_pdf.Length / 1024.0:N0} kB";
+        }
+        catch (Exception ex)
+        {
+            _pdf = null;
+            _valgtFilnavn = null;
+            _feil = $"Kunne ikke lese filen: {ex.Message}";
+        }
+    }
+
+    private async Task KjorOpplasting()
+    {
+        if (_pdf is null) return;
+        _jobber = true;
+        _feil = null;
+        _resultat = null;
+        try
+        {
+            var hint = new Opplastingshint
+            {
+                Nummer = _nummer,
+                Budsjettaar = _budsjettaar,
+                Tittel = string.IsNullOrWhiteSpace(_tittel) ? null : _tittel!.Trim()
+            };
+            _resultat = await Opplasting.LastOppAsync(_pdf, hint);
+        }
+        catch (Exception ex)
+        {
+            _feil = $"Noe gikk galt under behandlingen: {ex.Message}";
+        }
+        finally
+        {
+            _jobber = false;
+        }
+    }
+
+    private static string Overskrift(Opplastingsutfall utfall) => utfall switch
+    {
+        Opplastingsutfall.ForslagOpprettet => "Forslag opprettet",
+        Opplastingsutfall.EndringsforslagOpprettet => "Endringsforslag opprettet",
+        Opplastingsutfall.Duplikat => "Allerede behandlet",
+        Opplastingsutfall.VarigIgnorert => "Ignorert (varig regelverk)",
+        Opplastingsutfall.KunneIkkeLeseTekst => "Kunne ikke lese PDF",
+        _ => "Resultat"
+    };
+}

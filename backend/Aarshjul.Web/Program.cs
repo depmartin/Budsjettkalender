@@ -1,5 +1,7 @@
 using Aarshjul.Application.Brukere;
 using Aarshjul.Application.Brukerforslag;
+using Aarshjul.Application.Datouttrekk;
+using Aarshjul.Application.Opplasting;
 using Aarshjul.Application.Frister;
 using Aarshjul.Application.Generering;
 using Aarshjul.Application.Godkjenningsko;
@@ -10,6 +12,8 @@ using Aarshjul.Application.Varsler;
 using Aarshjul.Infrastructure;
 using Aarshjul.Infrastructure.Brukere;
 using Aarshjul.Infrastructure.Brukerforslag;
+using Aarshjul.Infrastructure.Datouttrekk;
+using Aarshjul.Infrastructure.Opplasting;
 using Aarshjul.Infrastructure.Frister;
 using Aarshjul.Infrastructure.Generering;
 using Aarshjul.Infrastructure.Godkjenningsko;
@@ -72,6 +76,11 @@ builder.Services.AddScoped<IWordEksport, WordEksportTjeneste>();
 builder.Services.AddSingleton<ISynlighetsregel, Synlighetsregel>();
 builder.Services.AddScoped<IGenereringstjeneste, GenereringsTjeneste>();
 builder.Services.AddScoped<IMaltjeneste, Maltjeneste>();
+// Manuell opplasting (Fase 2): PDF-tekst + fake datouttrekk (ekte Claude-provider byttes inn
+// bak IDatouttrekk når IT har avklart lokasjon/nøkkel) + pipeline til godkjenningskøen.
+builder.Services.AddSingleton<IPdfTekst, PdfPigTekst>();
+builder.Services.AddScoped<IDatouttrekk, FakeDatouttrekk>();
+builder.Services.AddScoped<IOpplasting, OpplastingTjeneste>();
 builder.Services.AddScoped<IBrukeroppslag, BrukeroppslagTjeneste>();
 builder.Services.AddScoped<ISynlighetskontekst, HttpSynlighetskontekst>();
 builder.Services.AddScoped<IClaimsTransformation, BrukerClaimsTransformation>();
