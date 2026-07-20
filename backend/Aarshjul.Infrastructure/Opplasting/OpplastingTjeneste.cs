@@ -82,20 +82,19 @@ public sealed class OpplastingTjeneste : IOpplasting
                 Melding = $"Dokumentet «{nokkel}» er allerede behandlet med uendret innhold — hoppet over."
             };
 
-        var uttrekk = await _datouttrekk.TrekkUtAsync(tekst, budsjettaar, ct);
-        var vurdering = Usikkerhetsregler.Vurder(uttrekk, budsjettaar);
-
-        var tittel = hint.Tittel
-            ?? uttrekk.Felt(Uttrekksfelter.Tittel)?.TolketVerdi
-            ?? $"Rundskriv {nokkel}";
-
-        // Trinn 2 (tittelgjenkjenning) — gjenkjent løp / ukjent type (varig er allerede silt bort).
-        var klassifisering = Totrinnsfilter.Klassifiser(hint.Nummer, tittel);
+        // Dokumentnivå: tittel + løp/kategori bestemmes én gang for hele rundskrivet (frister
+        // identifiseres på funksjon via dokumentets tittel/nummer, kravdok. 4.3). Hver enkelt
+        // uttrukne frist arver løp/kategori, men får sin egen dato og oppgavebeskrivelse.
+        var dokumentTittel = hint.Tittel ?? FoersteLinje(tekst) ?? $"Rundskriv {nokkel}";
+        var klassifisering = Totrinnsfilter.Klassifiser(hint.Nummer, dokumentTittel);
         var erUkjentType = klassifisering.Utfall == Klassifiseringsutfall.UkjentType;
-
-        var dato = ParseDato(uttrekk.Felt(Uttrekksfelter.Dato)?.TolketVerdi);
         var kilderef = hint.Nummer is int nr ? $"R-{nr}/{budsjettaar} (opplastet)" : $"{nokkel} (opplastet)";
 
+        // Trekk ut ALLE fristene i dokumentet — én Uttrekksresultat per frist.
+        var frister = await _datouttrekk.TrekkUtAsync(tekst, budsjettaar, ct);
+
+        var erEndretVersjon = eksisterende is not null;
+        Guid dokumentId;
         if (eksisterende is null)
         {
             var dok = new BehandletDokument
@@ -104,79 +103,82 @@ public sealed class OpplastingTjeneste : IOpplasting
                 Kilde = KildeKode,
                 DokumentNokkel = nokkel,
                 InnholdHash = hash,
-                Tittel = tittel,
+                Tittel = dokumentTittel,
                 ForstSett = _klokke.GetUtcNow(),
                 BehandletStatus = BehandletStatus.ForslagLaget,
                 SisteForsoek = _klokke.GetUtcNow()
             };
             _db.BehandledeDokumenter.Add(dok);
-
-            var forslag = LagForslag(
-                ForslagType.NyFrist, dok.Id, kilderef, tittel, dato, budsjettaar, klassifisering, uttrekk, vurdering);
-            _db.Forslag.Add(forslag);
-            await _db.SaveChangesAsync(ct);
-
-            return new Opplastingsresultat
-            {
-                Utfall = Opplastingsutfall.ForslagOpprettet,
-                ForslagId = forslag.Id,
-                Loep = klassifisering.Loep,
-                ErUkjentType = erUkjentType,
-                HarUsikkerhetsflagg = vurdering.HarFlagg,
-                Melding = erUkjentType
-                    ? "Årlig rundskriv uten gjenkjent tittel — lagt i køen som «ukjent type» til manuell vurdering."
-                    : $"Forslag lagt i godkjenningskøen{(klassifisering.Loep is null ? "" : $" (løp: {klassifisering.Loep})")}."
-            };
+            dokumentId = dok.Id;
+        }
+        else
+        {
+            // Endret versjon (hash avviker — uendret ble allerede silt bort over). Re-uttrekk til
+            // gjennomgang. Presis matching av hver frist mot en eksisterende publisert frist
+            // (endringsforslag / «foreslått fjernet») er full Steg C og tas når innhentingen går live.
+            eksisterende.InnholdHash = hash;
+            eksisterende.SisteForsoek = _klokke.GetUtcNow();
+            dokumentId = eksisterende.Id;
         }
 
-        // Kjent nøkkel + endret innhold → endringsforslag mot den berørte, publiserte fristen.
-        eksisterende.InnholdHash = hash;
-        eksisterende.SisteForsoek = _klokke.GetUtcNow();
+        var opprettede = new List<Forslag>();
+        var harFlagg = false;
 
-        var beroert = await _db.Frister
-            .Where(f => f.DokumentId == eksisterende.Id && f.Status == FristStatus.Godkjent)
-            .Select(f => f.Id)
-            .ToListAsync(ct);
+        if (frister.Count == 0)
+        {
+            // Ingen dato gjenkjent — mist ikke dokumentet: ett tentativt forslag til manuell vurdering.
+            opprettede.Add(LagForslag(dokumentId, kilderef, dokumentTittel, null, budsjettaar,
+                klassifisering, []));
+        }
+        else
+        {
+            foreach (var frist in frister)
+            {
+                var vurdering = Usikkerhetsregler.Vurder(frist, budsjettaar);
+                harFlagg |= vurdering.HarFlagg;
+                var tittel = frist.Felt(Uttrekksfelter.Tittel)?.TolketVerdi ?? dokumentTittel;
+                var dato = ParseDato(frist.Felt(Uttrekksfelter.Dato)?.TolketVerdi);
+                opprettede.Add(LagForslag(dokumentId, kilderef, tittel, dato, budsjettaar,
+                    klassifisering, frist.TilBevis(), Notat(vurdering)));
+            }
+        }
 
-        // Entydig berørt frist → endringsforslag. Ellers faller vi tilbake på et nytt-frist-forslag
-        // (ingenting går tapt); presis versjonsmatching kommer med full Steg C.
-        var erEndring = beroert.Count == 1;
-        var endringsforslag = LagForslag(
-            erEndring ? ForslagType.Endring : ForslagType.NyFrist,
-            eksisterende.Id, kilderef, tittel, dato, budsjettaar, klassifisering, uttrekk, vurdering);
-        if (erEndring)
-            endringsforslag.EndrerFristId = beroert[0];
-        _db.Forslag.Add(endringsforslag);
+        _db.Forslag.AddRange(opprettede);
         await _db.SaveChangesAsync(ct);
 
+        var antall = opprettede.Count;
         return new Opplastingsresultat
         {
-            Utfall = Opplastingsutfall.EndringsforslagOpprettet,
-            ForslagId = endringsforslag.Id,
+            Utfall = erEndretVersjon ? Opplastingsutfall.EndretVersjon : Opplastingsutfall.ForslagOpprettet,
+            AntallForslag = antall,
+            ForslagId = opprettede.FirstOrDefault()?.Id,
             Loep = klassifisering.Loep,
             ErUkjentType = erUkjentType,
-            HarUsikkerhetsflagg = vurdering.HarFlagg,
-            Melding = erEndring
-                ? "Endret versjon oppdaget — endringsforslag lagt i køen mot den berørte fristen."
-                : "Endret versjon oppdaget, men ingen entydig berørt frist — nytt forslag lagt i køen til manuell vurdering."
+            HarUsikkerhetsflagg = harFlagg,
+            Melding = Melding(erEndretVersjon, erUkjentType, antall, klassifisering.Loep)
         };
     }
 
-    private Forslag LagForslag(
-        ForslagType type, Guid dokumentId, string kilderef, string tittel, DateOnly? dato,
-        int budsjettaar, Klassifiseringsresultat klassifisering, Uttrekksresultat uttrekk,
-        Usikkerhetsvurdering vurdering)
+    private static string Melding(bool endret, bool ukjent, int antall, string? loep)
     {
-        // Endringsforslag rører aldri synlighet (punkt C); kun nytt-frist-forslag prefylles.
-        var synlighet = type == ForslagType.Endring
-            ? "[]"
-            : JsonSerializer.Serialize(_synlighetsregel.StandardForslagssynlighet());
+        if (ukjent)
+            return "Årlig rundskriv uten gjenkjent tittel — lagt i køen som «ukjent type» til manuell vurdering.";
+        var løpstekst = loep is null ? "" : $" (løp: {loep})";
+        var frasetekst = antall == 1 ? "1 forslag" : $"{antall} forslag";
+        return endret
+            ? $"Endret versjon oppdaget — {frasetekst} lagt i køen til gjennomgang{løpstekst}."
+            : $"{frasetekst} lagt i godkjenningskøen{løpstekst}.";
+    }
 
+    private Forslag LagForslag(
+        Guid dokumentId, string kilderef, string tittel, DateOnly? dato, int budsjettaar,
+        Klassifiseringsresultat klassifisering, IReadOnlyList<UttrekksBevis> bevis, string? usikkerhetsnotat = null)
+    {
         var harDato = dato is not null;
         return new Forslag
         {
             Id = Guid.NewGuid(),
-            ForslagType = type,
+            ForslagType = ForslagType.NyFrist,
             Opphav = Opphav.Robot,
             KildeEllerInnsender = kilderef,
             Tittel = tittel,
@@ -185,12 +187,24 @@ public sealed class OpplastingTjeneste : IOpplasting
             Budsjettaar = budsjettaar,
             Kategori = klassifisering.Kategori ?? Kategori.Budsjett,
             Loep = klassifisering.Loep,
-            Notat = Notat(vurdering),
-            ForeslaattSynlighet = synlighet,
+            Notat = usikkerhetsnotat,
+            // Auto/robot-forslag prefylles FIN-internt (FA+FIN-FAG), aldri POL/FAG (synlighetsregel).
+            ForeslaattSynlighet = JsonSerializer.Serialize(_synlighetsregel.StandardForslagssynlighet()),
             Status = FristStatus.Forslag,
             DokumentId = dokumentId,
-            UttrekksBevis = uttrekk.TilBevis().ToList()
+            UttrekksBevis = bevis.ToList()
         };
+    }
+
+    private static string? FoersteLinje(string tekst)
+    {
+        foreach (var linje in tekst.Split('\n'))
+        {
+            var t = linje.Trim();
+            if (t.Length >= 8)
+                return t.Length > 200 ? t[..200] : t;
+        }
+        return null;
     }
 
     private static string? Notat(Usikkerhetsvurdering vurdering) =>

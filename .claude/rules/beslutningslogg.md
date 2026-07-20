@@ -30,6 +30,16 @@ Dette er prosjektets hukommelse mellom økter. Les hele ved start av hver økt.
 
 ## Beslutninger
 
+### [2026-07-20] Datouttrekk: én frist per rundskriv → mange frister per rundskriv
+- Kontekst: Brukeren påpekte at ett rundskriv typisk inneholder mange frister med ulike datoer (kravdok. 4.4), mens pipelinen laget kun ett forslag per dokument. `IDatouttrekk` returnerte én frist. Lukket gapet.
+- Beslutning (147 tester grønt, verifisert i nettleser):
+  - **`IDatouttrekk.TrekkUtAsync` returnerer nå `IReadOnlyList<Uttrekksresultat>`** — én per frist. Tom liste = ingen dato gjenkjent (dokumentet mistes ikke: ett tentativt forslag til manuell vurdering).
+  - **`OpplastingTjeneste` klassifiserer på dokumentnivå én gang** (tittel/nummer → løp/kategori, kravdok. 4.3) og lager **ett `Forslag` per frist**, alle med samme `DokumentId` (grupperes under kilden i køen) og arvet løp/kategori, men egen dato + oppgavetittel + eget uttrekksbevis.
+  - **`FakeDatouttrekk` finner alle datoene** (norsk + numerisk) og utleder oppgavetittel fra setningen rundt hver dato. Deterministisk stand-in; ekte Claude tolker tidsplanen mer presist og byttes inn uendret bak grensesnittet.
+  - **Endret-versjon-håndtering forenklet:** kjent nøkkel + ny hash → re-uttrekk som nye forslag (`Opplastingsutfall.EndretVersjon`), ikke lenger ett endringsforslag mot én frist. **Presis per-frist-matching mot eksisterende publiserte frister (endringsforslag / «foreslått fjernet») er full Steg C** og tas når live innhenting kobles på — å foregi matching vi ikke gjør, ville vært verre. Endringsforslag demonstreres fortsatt via seed-data og «Foreslå endring».
+  - `Opplastingsresultat` fikk `AntallForslag`; kømeldingen sier «N forslag lagt i køen».
+- Verifisert i nettleser: én opplastet PDF med tre datoer ga tre separate forslagskort (hver med egen dato/tittel/bevis, løp rammefordeling), gruppert under «R-4/2028 (opplastet)». Konsekvens: ingen EF-migrasjon. Bærende prinsipp urørt (alt i køen, POL aldri auto).
+
 ### [2026-07-20] Demo gjort faktisk brukbar: interaktivitet fikset (rotårsak funnet)
 - Kontekst: Brukeren ba om «et ferdig demo jeg kan prøve» (uten live PDF-henting). Ved verifisering i ekte nettleser (headless Chromium mot demoen) fant jeg at ingen interaktive handlinger virket — knapper, filtre, opplasting og køhandlinger gjorde ingenting. To separate rotårsaker, begge nå fikset og verifisert ende-til-ende:
   - **(1) Static web assets ble ikke servert i miljøet `Demo`.** `WebApplication` kaller `UseStaticWebAssets()` kun automatisk i `Development`. `Demo` er et eget miljø, så `blazor.web.js` og scoped CSS ga 500 → Blazor-kretsen koblet aldri opp. **Fiks:** `if (erDemo) builder.WebHost.UseStaticWebAssets();` i `Program.cs`.

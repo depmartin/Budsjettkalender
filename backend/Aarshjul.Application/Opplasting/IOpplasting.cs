@@ -14,11 +14,11 @@ public sealed record Opplastingshint
 /// <summary>Hva den manuelle opplastingen førte til.</summary>
 public enum Opplastingsutfall
 {
-    /// <summary>Nytt robotforslag lagt i godkjenningskøen.</summary>
+    /// <summary>Nytt dokument → ett eller flere robotforslag (ett per frist) lagt i køen.</summary>
     ForslagOpprettet,
 
-    /// <summary>Kjent dokument med endret innhold → endringsforslag mot berørt frist.</summary>
-    EndringsforslagOpprettet,
+    /// <summary>Kjent dokument med endret innhold → re-uttrekk, nye forslag til gjennomgang.</summary>
+    EndretVersjon,
 
     /// <summary>Kjent dokument med uendret innhold → hoppet over (dedup).</summary>
     Duplikat,
@@ -34,7 +34,13 @@ public enum Opplastingsutfall
 public sealed record Opplastingsresultat
 {
     public required Opplastingsutfall Utfall { get; init; }
+
+    /// <summary>Antall forslag som ble lagt i køen (ett per frist funnet i dokumentet).</summary>
+    public int AntallForslag { get; init; }
+
+    /// <summary>Id-en til det første forslaget (for lenke til køen), hvis noe ble laget.</summary>
     public Guid? ForslagId { get; init; }
+
     public string? Loep { get; init; }
     public bool ErUkjentType { get; init; }
     public bool HarUsikkerhetsflagg { get; init; }

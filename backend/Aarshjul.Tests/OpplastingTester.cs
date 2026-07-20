@@ -37,6 +37,13 @@ public class OpplastingTester
         "Hovudbudsjettskriv for 2027\nRetningslinjer for arbeidet med statsbudsjettet.\n" +
         "Frist for innsending av satsingsforslag er 23. januar 2026.";
 
+    // Ett rundskriv med tre frister på ulike datoer (typisk tidsplan-seksjon).
+    private const string Flerfristtekst =
+        "Hovudbudsjettskriv for 2027\n" +
+        "Frist for innsending av satsingsforslag er 23. januar 2026.\n" +
+        "Rammefordelingsmøtene holdes 15. mars 2026.\n" +
+        "Endelig rammefordeling foreligger 30. april 2026.";
+
     [Fact]
     public async Task Ny_pdf_gir_robotforslag_i_koen_med_bevis_og_synlighet()
     {
@@ -93,38 +100,45 @@ public class OpplastingTester
     }
 
     [Fact]
-    public async Task Endret_innhold_gir_endringsforslag_mot_beroert_frist()
+    public async Task Flere_frister_i_ett_dokument_gir_ett_forslag_per_frist()
+    {
+        using var t = new Testdatabase();
+        var res = await Tjeneste(t.Db, Flerfristtekst).LastOppAsync(EnPdf,
+            new Opplastingshint { Nummer = 4, Budsjettaar = 2027 });
+
+        Assert.Equal(Opplastingsutfall.ForslagOpprettet, res.Utfall);
+        Assert.Equal(3, res.AntallForslag);
+
+        var forslag = await t.Db.Forslag.ToListAsync();
+        Assert.Equal(3, forslag.Count);
+        // Hver frist har sin egen dato ...
+        var datoer = forslag.Select(f => f.Dato).OrderBy(d => d).ToArray();
+        Assert.Equal(
+            new DateOnly?[] { new(2026, 1, 23), new(2026, 3, 15), new(2026, 4, 30) },
+            datoer);
+        // ... men deler kildedokument og løp (arvet fra dokumentets tittel/nummer).
+        Assert.Single(forslag.Select(f => f.DokumentId).Distinct());
+        Assert.All(forslag, f => Assert.Equal("rammefordeling", f.Loep));
+        Assert.Single(await t.Db.BehandledeDokumenter.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Endret_versjon_gir_nye_forslag_til_gjennomgang()
     {
         using var t = new Testdatabase();
         var hint = new Opplastingshint { Nummer = 4, Budsjettaar = 2027 };
 
         await Tjeneste(t.Db, Rammefordelingstekst).LastOppAsync(EnPdf, hint);
-        var dok = await t.Db.BehandledeDokumenter.SingleAsync();
 
-        // Simuler at forslaget er godkjent og publisert som en frist koblet til dokumentet.
-        var frist = new Frist
-        {
-            Id = Guid.NewGuid(),
-            Tittel = "Hovudbudsjettskriv for 2027",
-            Dato = new DateOnly(2026, 1, 23),
-            Budsjettaar = 2027,
-            Kategori = Kategori.Budsjett,
-            Loep = "rammefordeling",
-            DokumentId = dok.Id,
-            Status = FristStatus.Godkjent
-        };
-        t.Db.Frister.Add(frist);
-        await t.Db.SaveChangesAsync();
-
-        // Ny versjon av samme rundskriv (endret tekst → ny hash).
-        var endret = Rammefordelingstekst + "\nOppdatert: fristen er flyttet til 30. januar 2026.";
+        // Ny versjon av samme rundskriv (endret tekst → ny hash) med en ekstra frist.
+        var endret = Rammefordelingstekst + "\nRammefordelingsmøtene holdes 15. mars 2026.";
         var res = await Tjeneste(t.Db, endret).LastOppAsync(EnPdf, hint);
 
-        Assert.Equal(Opplastingsutfall.EndringsforslagOpprettet, res.Utfall);
-        var endringsforslag = await t.Db.Forslag.SingleAsync(f => f.ForslagType == ForslagType.Endring);
-        Assert.Equal(frist.Id, endringsforslag.EndrerFristId);
-        // Endringsforslag rører aldri synlighet.
-        Assert.Equal("[]", endringsforslag.ForeslaattSynlighet);
+        Assert.Equal(Opplastingsutfall.EndretVersjon, res.Utfall);
+        Assert.Equal(2, res.AntallForslag);
+        // Fortsatt bare ett behandlet dokument (samme nøkkel), men flere forslag totalt.
+        Assert.Single(await t.Db.BehandledeDokumenter.ToListAsync());
+        Assert.Equal(3, await t.Db.Forslag.CountAsync()); // 1 fra første + 2 fra re-uttrekket
     }
 
     [Fact]
