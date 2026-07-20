@@ -82,10 +82,22 @@ builder.Services.AddScoped<IWordEksport, WordEksportTjeneste>();
 builder.Services.AddSingleton<ISynlighetsregel, Synlighetsregel>();
 builder.Services.AddScoped<IGenereringstjeneste, GenereringsTjeneste>();
 builder.Services.AddScoped<IMaltjeneste, Maltjeneste>();
-// Manuell opplasting (Fase 2): PDF-tekst + fake datouttrekk (ekte Claude-provider byttes inn
-// bak IDatouttrekk når IT har avklart lokasjon/nøkkel) + pipeline til godkjenningskøen.
+// Manuell opplasting (Fase 2): PDF-tekst + datouttrekk + pipeline til godkjenningskøen.
 builder.Services.AddSingleton<IPdfTekst, PdfPigTekst>();
-builder.Services.AddScoped<IDatouttrekk, FakeDatouttrekk>();
+builder.Services.Configure<DatouttrekkOpsjoner>(builder.Configuration.GetSection(DatouttrekkOpsjoner.Seksjon));
+// Ekte Claude når en API-nøkkel er satt (Datouttrekk:ApiNokkel eller ANTHROPIC_API_KEY),
+// ellers deterministisk fake. Endelig provider/lokasjon er et IT-styringsspørsmål (kravdok. kap. 12).
+var datouttrekkNokkel = builder.Configuration[$"{DatouttrekkOpsjoner.Seksjon}:ApiNokkel"]
+    ?? Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
+if (!string.IsNullOrWhiteSpace(datouttrekkNokkel))
+{
+    builder.Services.PostConfigure<DatouttrekkOpsjoner>(o => o.ApiNokkel ??= datouttrekkNokkel);
+    builder.Services.AddHttpClient<IDatouttrekk, ClaudeDatouttrekk>();
+}
+else
+{
+    builder.Services.AddScoped<IDatouttrekk, FakeDatouttrekk>();
+}
 builder.Services.AddScoped<IOpplasting, OpplastingTjeneste>();
 builder.Services.AddScoped<IBrukeroppslag, BrukeroppslagTjeneste>();
 builder.Services.AddScoped<ISynlighetskontekst, HttpSynlighetskontekst>();

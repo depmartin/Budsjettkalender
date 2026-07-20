@@ -62,8 +62,8 @@ Bruk **«Bytt persona»** øverst for å veksle.
    visningene.
 4. **Last opp rundskriv** (som admin, **Last opp**): last opp en rundskriv-PDF.
    Den kjøres gjennom pipelinen (dedup → filtrering → datouttrekk) og havner som
-   forslag i køen. *Datouttrekket er foreløpig en deterministisk stand-in; ekte
-   Claude kobles på når IT har avklart lokasjon/nøkkel.*
+   forslag i køen. *Datouttrekket er en deterministisk stand-in som standard;
+   sett en ekte Claude-nøkkel for å bruke ekte språkmodell (se under).*
 5. **Generér neste år** (som admin, **Generér**) og **Årsmal** (**Mal**): se
    hvordan et budsjettår genereres fra gjentaksregler, med valgårsmerking.
 6. **Skriv ut til Word** (som admin, **Eksporter**): last ned et .docx for en
@@ -74,4 +74,28 @@ Bruk **«Bytt persona»** øverst for å veksle.
 - Henter ikke fra regjeringen.no (Cloudflare/IT-avklaring). Bruk «Last opp» i
   mellomtiden.
 - Bruker ikke ekte Entra eller Azure SQL.
-- Datouttrekket er en stand-in, ikke ekte språkmodell ennå.
+- Datouttrekket er en stand-in med mindre du kobler på en ekte Claude-nøkkel (se under).
+
+## Ekte datouttrekk med Claude (valgfritt)
+
+Pipelinen kaller Claude bak `IDatouttrekk` når en API-nøkkel er satt, ellers brukes
+den deterministiske stand-in-en. For å slå på ekte uttrekk i demoen, sett
+miljøvariabelen før du starter appen:
+
+```powershell
+# Windows PowerShell
+$env:ANTHROPIC_API_KEY="<din-nokkel>"
+$env:ASPNETCORE_ENVIRONMENT="Demo"
+dotnet run --project backend/Aarshjul.Web --no-launch-profile
+```
+
+```bash
+# macOS/Linux
+ANTHROPIC_API_KEY="<din-nokkel>" ASPNETCORE_ENVIRONMENT=Demo \
+  dotnet run --project backend/Aarshjul.Web --no-launch-profile
+```
+
+Alternativt kan nøkkel/modell/URL settes under seksjonen `Datouttrekk` i appsettings
+(`ApiNokkel`, `Modell`, `BasisUrl`). Resten av pipelinen er uendret — kun tolkningen
+av PDF-teksten byttes fra stand-in til ekte modell. Endelig provider/lokasjon (ekstern
+Claude API vs. Azure-vertet) er et IT-styringsspørsmål (kravdok. kap. 12).
