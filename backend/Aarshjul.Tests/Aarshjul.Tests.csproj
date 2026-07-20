@@ -22,6 +22,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Fixtures\regjeringen-rundskriv-arkiv.html" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Aarshjul.Domain\Aarshjul.Domain.csproj" />
     <ProjectReference Include="..\Aarshjul.Application\Aarshjul.Application.csproj" />
     <ProjectReference Include="..\Aarshjul.Infrastructure\Aarshjul.Infrastructure.csproj" />
