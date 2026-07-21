@@ -86,7 +86,7 @@ Datamodellen er i hovedsak komplett. To vurderinger:
 - **Typede regelparametre.** Legg parameter-modeller (DTO-er) i Application-laget som
   (de)serialiseres mot `Gjentaksregel.Regelparametre` (JSON), framfor å endre skjema:
   - `FastDato`: `{ "maaned": 7, "dag": 20 }`
-  - `RelativUkedag`: `{ "maaned": 3, "uke": 2, "ukedag": "man" }`
+  - `RelativUkedag`: `{ "maaned": 3, "uke": 2, "ukedag": "man" }`, eller med `fra_dag` i stedet for `uke`: `{ "maaned": 7, "ukedag": "man", "fra_dag": 20 }` (første ukedag på/etter dagen — «mandagen i uken 20.–26.»)
   - `RelativTilMilepael`: `{ "anker_loep": "fremleggelse", "offset_dager": -7 }`
   **Ingen ny kolonne / EF-migrasjon nødvendig for dette.**
 - **Synlighetsregler.** Anbefaling: start **konfig-drevet** (en enkel regel «genererte/

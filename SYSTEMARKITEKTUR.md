@@ -62,7 +62,7 @@ Designet skiller tydeligere mellom et publisert frist-objekt og et forslag enn k
 
 ### 3.3 Årsmal og gjentaksregler
 
-Uendret fra kravdokumentet. Malen lagrer regler, ikke datoer. De tre regeltypene er `fast_dato`, `relativ_ukedag` og `relativ_til_milepael`, og et felt `valgaarssensitiv` angir om regelen påvirkes av valg. Ved generering beregnes konkrete datoer fra reglene (se 8).
+Uendret fra kravdokumentet. Malen lagrer regler, ikke datoer. De tre regeltypene er `fast_dato`, `relativ_ukedag` og `relativ_til_milepael`, og et felt `valgaarssensitiv` angir om regelen påvirkes av valg. Ved generering beregnes konkrete datoer fra reglene (se 8). `relativ_ukedag` støtter to modi: n-te forekomst av ukedagen i måneden (`uke`), eller — når `fra_dag` er satt — første forekomst av ukedagen på eller etter den dagen (f.eks. «mandagen i uken 20.–26. juli» = første mandag på/etter 20. juli).
 
 ### 3.4 Behandlet dokument
 

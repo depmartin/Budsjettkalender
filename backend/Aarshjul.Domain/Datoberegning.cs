@@ -66,6 +66,19 @@ public static class Datoberegning
     }
 
     /// <summary>
+    /// Første forekomst av en ukedag på eller etter en gitt dag i måneden (kravdok. 3.3
+    /// <c>relativ_ukedag</c> med <c>fra_dag</c>). Uttrykker f.eks. «mandagen i uken mellom 20. og
+    /// 26. juli» = første mandag på eller etter 20. juli — som alltid lander innen 6 dager, altså i
+    /// vinduet 20.–26. Resultatet justeres til nærmeste virkedag.
+    /// </summary>
+    public static DateOnly FoersteUkedagFraOgMed(int aar, int maaned, int fraDag, DayOfWeek ukedag)
+    {
+        var start = new DateOnly(aar, maaned, fraDag);
+        var diffTilUkedag = ((int)ukedag - (int)start.DayOfWeek + 7) % 7;
+        return Virkedagjuster(start.AddDays(diffTilUkedag));
+    }
+
+    /// <summary>
     /// Justerer en dato som lander på lørdag/søndag til nærmeste virkedag, men <b>aldri over et
     /// årsskifte</b> (beslutning: justeringen holdes innenfor samme kalenderår). Helligdager
     /// holdes utenfor i første omgang — kun helg. Virkedager returneres uendret.

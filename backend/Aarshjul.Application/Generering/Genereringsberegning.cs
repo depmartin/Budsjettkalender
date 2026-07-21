@@ -168,11 +168,15 @@ public sealed class Genereringsberegning
         DateOnly dato;
         try
         {
-            dato = Datoberegning.NteUkedag(kalenderaar, p.Maaned, p.Uke, ukedag);
+            // Med fra_dag: første ukedag på/etter dagen (f.eks. mandagen i uken 20.–26.).
+            // Ellers: n-te forekomst av ukedagen i måneden.
+            dato = p.FraDag is int fraDag
+                ? Datoberegning.FoersteUkedagFraOgMed(kalenderaar, p.Maaned, fraDag, ukedag)
+                : Datoberegning.NteUkedag(kalenderaar, p.Maaned, p.Uke, ukedag);
         }
         catch (ArgumentOutOfRangeException)
         {
-            return new BeregnetRegel { Regel = regel, Feil = $"Ugyldig måned ({p.Maaned}) for «{regel.Loep}»." };
+            return new BeregnetRegel { Regel = regel, Feil = $"Ugyldig måned/dag for «{regel.Loep}»." };
         }
 
         return MedValgaar(regel, dato);
