@@ -1,0 +1,24 @@
+{
+  "name": "Årshjul for budsjettfrister — demo (.NET 10)",
+  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/dotnet:2": {
+      "version": "10.0"
+    }
+  },
+  "forwardPorts": [5014],
+  "portsAttributes": {
+    "5014": {
+      "label": "Årshjul demo",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "postCreateCommand": "dotnet restore backend/Aarshjul.slnx",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csdevkit"
+      ]
+    }
+  }
+}

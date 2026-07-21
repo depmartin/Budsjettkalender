@@ -21,7 +21,7 @@ Rammene er gitt av kravdokumentet (kap. 9) og ligger fast: drift på Azure, infr
 
 ## Utviklingsmiljø
 
-- **GitHub Codespaces / Claude Code-web** som skybasert dev-miljø. Påvirker ikke produksjonsdrift.
+- **GitHub Codespaces / Claude Code-web** som skybasert dev-miljø. Påvirker ikke produksjonsdrift. `.devcontainer/devcontainer.json` gir .NET 10 + portforwarding (5014) så demo-modus kan kjøres i nettleseren uten lokal .NET-installasjon (`dotnet run --project backend/Aarshjul.Web --launch-profile demo`).
 - **Claude Code** brukes i utviklingen. Kontekstfilene (`CLAUDE.md` + `.claude/rules/`) leses ved oppstart av hver økt; se den daglige rytmen i CLAUDE.md.
 
 ### Miljøoppsett (VIKTIG — kjør ved start av ny økt hvis verktøyene mangler)

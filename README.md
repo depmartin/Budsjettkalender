@@ -9,6 +9,31 @@ suppleres manuelt, og presenterer dem som et flerårig årshjul med tre visninge
 synlighet håndheves på server, og automatiske uttrekk passerer alltid en godkjenningskø.
 Drift på Azure med infrastruktur som kode (Bicep).
 
+## Prøv demoen (uten å installere .NET lokalt)
+
+Løsningen har en **lokal demo-modus** (miljø `Demo`) med SQLite og en dev-innlogging, uten
+Azure SQL eller Entra. Den kan kjøres i nettleseren via **GitHub Codespaces** — da kjører alt
+i skyen, og du trenger ikke laste ned .NET til egen maskin:
+
+1. Åpne repoet i Codespaces (grønn **Code**-knapp på GitHub → **Codespaces** → **Create codespace**),
+   eller direkte: <https://codespaces.new/depmartin/Budsjettkalender>.
+2. Vent til miljøet er klart (devcontaineren installerer .NET 10 automatisk).
+3. Kjør i terminalen:
+   ```
+   dotnet run --project backend/Aarshjul.Web --launch-profile demo
+   ```
+4. Codespaces åpner (eller tilbyr) en klikkbar URL til port 5014. Legg til `/demo` i adressen
+   og velg en persona (admin, FA, FIN-FAG, FAG eller POL).
+
+> Codespaces må være tillatt for kontoen/organisasjonen din. Er det sperret, kan demoen i
+> stedet kjøres lokalt med samme kommando etter at .NET 10 SDK er installert.
+
+Kjøre lokalt (krever [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)):
+
+```
+ASPNETCORE_ENVIRONMENT=Demo dotnet run --project backend/Aarshjul.Web
+```
+
 ## Dokumentasjon
 
 - [`kravdokument-aarshjul-frister_v2.md`](kravdokument-aarshjul-frister_v2.md) — full kravspesifikasjon.
