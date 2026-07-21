@@ -1,0 +1,121 @@
+@page "/admin/last-opp"
+@using Aarshjul.Application.Opplasting
+@attribute [Authorize(Policy = Autorisasjon.ErAdministrator)]
+@inject IDokumentopplasting Opplasting
+@inject NavigationManager Nav
+
+<PageTitle>Last opp dokument</PageTitle>
+
+<h1>Last opp dokument</h1>
+
+<p class="melding">
+    Last opp et dokument (PDF), så leser løsningen gjennom det og finner mulige frister — med
+    samme uttrekk og klassifisering som den automatiske innhentingen fra regjeringen.no.
+    Det som finnes, legges som forslag i <a href="/admin/ko">godkjenningskøen</a> for gjennomgang.
+    Ingenting publiseres før du godkjenner det.
+</p>
+
+<div class="skjema">
+    <label>Budsjettår
+        <input type="number" @bind="_budsjettaar" />
+    </label>
+
+    <label>Dokument (PDF)
+        <InputFile OnChange="VelgFil" accept=".pdf" />
+    </label>
+
+    @if (_valgtNavn is not null)
+    {
+        <p class="melding">Valgt fil: <strong>@_valgtNavn</strong> (@_valgtStr)</p>
+    }
+
+    @if (_feil is not null)
+    {
+        <div class="feil">@_feil</div>
+    }
+
+    @if (_resultat is { } r)
+    {
+        <div class="melding">
+            @if (r.AlleredeBehandlet)
+            {
+                <text>Dokumentet er allerede lest inn tidligere — ingen nye forslag laget.</text>
+            }
+            else if (r.AntallForslag > 0)
+            {
+                <text>Leste inn dokumentet og laget <strong>@r.AntallForslag</strong> forslag.
+                Gå til <a href="/admin/ko">godkjenningskøen</a> for å gjennomgå dem.</text>
+            }
+            else
+            {
+                <text>@(r.Melding ?? "Fant ingen frister i dokumentet.")</text>
+            }
+        </div>
+    }
+
+    <div class="skjemarad">
+        <button class="knapp knapp-primær" @onclick="LesInn" disabled="@(_fil is null || _arbeider)">
+            @(_arbeider ? "Leser …" : "Les inn dokument")
+        </button>
+    </div>
+</div>
+
+@code {
+    private const long MaksStorrelse = 15 * 1024 * 1024; // 15 MB
+
+    private int _budsjettaar = DateTime.Today.Year + 1;
+    private IBrowserFile? _fil;
+    private string? _valgtNavn;
+    private string? _valgtStr;
+    private OpplastingsResultat? _resultat;
+    private string? _feil;
+    private bool _arbeider;
+
+    private void VelgFil(InputFileChangeEventArgs e)
+    {
+        _resultat = null;
+        _feil = null;
+        _fil = e.File;
+        _valgtNavn = e.File.Name;
+        _valgtStr = $"{e.File.Size / 1024} kB";
+
+        if (e.File.Size > MaksStorrelse)
+        {
+            _feil = "Filen er for stor (maks 15 MB).";
+            _fil = null;
+        }
+        else if (!e.File.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            _feil = "Kun PDF-filer støttes i denne omgang.";
+            _fil = null;
+        }
+    }
+
+    private async Task LesInn()
+    {
+        if (_fil is null)
+        {
+            return;
+        }
+
+        _arbeider = true;
+        _feil = null;
+        _resultat = null;
+        try
+        {
+            using var ms = new MemoryStream();
+            await _fil.OpenReadStream(MaksStorrelse).CopyToAsync(ms);
+            var dokument = new OpplastetDokument(_fil.Name, ms.ToArray());
+            _resultat = await Opplasting.LesOgLagForslagAsync(dokument, _budsjettaar);
+        }
+        catch (Exception ex)
+        {
+            // Ulesbar/korrupt PDF e.l. — vis en tydelig melding framfor å feile stille.
+            _feil = $"Klarte ikke lese dokumentet: {ex.Message}";
+        }
+        finally
+        {
+            _arbeider = false;
+        }
+    }
+}
