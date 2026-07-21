@@ -13,7 +13,8 @@
       "onAutoForward": "openBrowser"
     }
   },
-  "postCreateCommand": "dotnet restore backend/Aarshjul.slnx",
+  "postCreateCommand": "dotnet build backend/Aarshjul.slnx",
+  "postAttachCommand": "sh -c 'curl -sf http://localhost:5014/demo >/dev/null 2>&1 || nohup dotnet run --project backend/Aarshjul.Web --launch-profile demo >/tmp/aarshjul-demo.log 2>&1 &'",
   "customizations": {
     "vscode": {
       "extensions": [

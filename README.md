@@ -15,18 +15,20 @@ Løsningen har en **lokal demo-modus** (miljø `Demo`) med SQLite og en dev-innl
 Azure SQL eller Entra. Den kan kjøres i nettleseren via **GitHub Codespaces** — da kjører alt
 i skyen, og du trenger ikke laste ned .NET til egen maskin:
 
-1. Åpne repoet i Codespaces (grønn **Code**-knapp på GitHub → **Codespaces** → **Create codespace**),
-   eller direkte: <https://codespaces.new/depmartin/Budsjettkalender>.
-2. Vent til miljøet er klart (devcontaineren installerer .NET 10 automatisk).
-3. Kjør i terminalen:
-   ```
-   dotnet run --project backend/Aarshjul.Web --launch-profile demo
-   ```
-4. Codespaces åpner (eller tilbyr) en klikkbar URL til port 5014. Legg til `/demo` i adressen
-   og velg en persona (admin, FA, FIN-FAG, FAG eller POL).
+1. Åpne <https://codespaces.new/depmartin/Budsjettkalender> (eller grønn **Code**-knapp på GitHub →
+   **Codespaces** → **Create codespace on main**).
+2. Vent mens miljøet bygges — devcontaineren installerer .NET 10, bygger løsningen og
+   **starter demoen automatisk**. Første gang tar det et par minutter.
+3. Når appen er oppe, tilbyr Codespaces en klikkbar URL til port 5014 (åpnes vanligvis av seg selv).
+   Klikk **Logg inn** (eller **Bytt persona** i demo-banneret) for å komme til persona-velgeren,
+   og velg en rolle: admin, FA, FIN-FAG, FAG eller POL.
 
-> Codespaces må være tillatt for kontoen/organisasjonen din. Er det sperret, kan demoen i
-> stedet kjøres lokalt med samme kommando etter at .NET 10 SDK er installert.
+> Starter den ikke automatisk (eller du lukket fanen), kjør i terminalen:
+> ```
+> dotnet run --project backend/Aarshjul.Web --launch-profile demo
+> ```
+> Åpne så port 5014. Codespaces må være tillatt for kontoen/organisasjonen din; er det sperret,
+> kan demoen kjøres lokalt med samme kommando etter at .NET 10 SDK er installert.
 
 Kjøre lokalt (krever [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)):
 
