@@ -67,15 +67,26 @@ serverer statiske filer riktig.
 
 ## Status
 
-**Fase 1 (fundament) er ferdig** og ligger i PR #1: .NET 10 / ASP.NET Core + EF Core,
-Azure SQL, Blazor (Interactive Server), server-side synlighetsfiltrering, Entra-innlogging,
-manuell innlegging, de tre visningene, administrator-innsyn, og grunnleggende Bicep + CI.
-23 tester grønt. Planleggingen av Fase 2 (automatikk) og Fase 3 (mal og generering) er
-ferdig — se `fase2-plan.md` og `fase3-plan.md`. Neste er koding av Fase 2 (kilde,
-godkjenningskø, brukerforslag, Word-utskrift, bakgrunnsjobb), deretter Fase 3.
+Alt kodet så langt er på `main`. Kort oppsummert:
 
-Se `.claude/rules/beslutningslogg.md` («Status nå») for fremdrift og neste steg, og
-`.claude/rules/arkitektur.md` for stack, miljøoppsett og kommandoer.
+- **Fase 1 (fundament):** .NET 10 / ASP.NET Core + EF Core, Azure SQL, Blazor (Interactive
+  Server), server-side synlighetsfiltrering, Entra-innlogging, manuell innlegging, de tre
+  visningene, administrator-innsyn, Bicep + CI.
+- **Fase 2 (automatikk) — offline-delene:** kildeabstraksjon, totrinns filtrering, godkjenningskø,
+  brukerforslag, endringsforslag, varsel, Word-utskrift, og **manuell dokumentopplasting**
+  (`/admin/last-opp`) med samme uttrekk som automatisk innhenting. Gjenstående Fase 2 (live
+  oppdagelse/henting/datouttrekk fra regjeringen.no + bakgrunnsjobb) er blokkert til egress mot
+  `www.regjeringen.no` åpnes.
+- **Fase 3 (mal og generering):** gjentaksregler, «generér neste år», synlighetsregler,
+  valgårslogikk.
+- **Lokal demo-modus** (SQLite + dev-innlogging + demo-data) for kjøring uten Azure SQL/Entra —
+  se «Prøv demoen» over.
+
+140 tester grønt på .NET 10.
+
+**Kilde til fremdrift:** `.claude/rules/beslutningslogg.md` («Status nå» + beslutningsloggen) er
+den autoritative, oppdaterte oversikten over fremdrift, beslutninger og neste steg. `README`
+her holdes bevisst kort. Se `.claude/rules/arkitektur.md` for stack, miljøoppsett og kommandoer.
 
 ### Bygg og test
 
