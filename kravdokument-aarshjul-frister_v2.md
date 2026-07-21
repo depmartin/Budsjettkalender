@@ -124,7 +124,7 @@ Malen lagrer **regler**, ikke datoer. Når et nytt budsjettår genereres, beregn
 Regeltyper:
 
 - `fast_dato`: samme dato hvert år (justeres til nærmeste virkedag ved helg). Parametre: `{ "maaned": 7, "dag": 20 }`.
-- `relativ_ukedag`: f.eks. «andre uke i mars». Parametre: `{ "maaned": 3, "uke": 2, "ukedag": "man" }`.
+- `relativ_ukedag`: f.eks. «andre uke i mars». Parametre: `{ "maaned": 3, "uke": 2, "ukedag": "man" }`. Alternativt kan `fra_dag` settes i stedet for `uke` for **første forekomst av ukedagen på eller etter en gitt dag** i måneden — f.eks. «mandagen i uken mellom 20. og 26. juli» = `{ "maaned": 7, "ukedag": "man", "fra_dag": 20 }` (første mandag på/etter 20. juli lander alltid i 20.–26.).
 - `relativ_til_milepael`: forskyvning fra annen milepæl. Parametre: `{ "anker_loep": "fremleggelse", "offset_dager": -7 }`.
 
 `relativ_til_milepael` flytter seg automatisk når ankeret flyttes — nyttig for frister bundet til budsjettframleggelsen.

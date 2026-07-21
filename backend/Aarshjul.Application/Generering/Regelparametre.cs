@@ -15,14 +15,21 @@ public sealed record FastDatoParametre(
     [property: JsonPropertyName("aar_forskyvning")] int AarForskyvning = 0);
 
 /// <summary>
-/// Parametre for <see cref="Regeltype.RelativUkedag"/>: n-te forekomst av en ukedag i en måned
-/// (f.eks. «andre uke i mars, mandag»). <c>aar_forskyvning</c> som for <see cref="FastDatoParametre"/>.
+/// Parametre for <see cref="Regeltype.RelativUkedag"/>. To modi:
+/// <list type="bullet">
+/// <item>n-te forekomst av en ukedag i måneden (<c>uke</c>), f.eks. «andre mandag i mars».</item>
+/// <item>første forekomst av ukedagen <b>på eller etter</b> <c>fra_dag</c>, f.eks. «mandagen i
+/// uken mellom 20. og 26. juli» = første mandag på/etter 20. juli. Når <c>fra_dag</c> er satt,
+/// brukes denne i stedet for <c>uke</c>.</item>
+/// </list>
+/// <c>aar_forskyvning</c> som for <see cref="FastDatoParametre"/>.
 /// </summary>
 public sealed record RelativUkedagParametre(
     [property: JsonPropertyName("maaned")] int Maaned,
     [property: JsonPropertyName("uke")] int Uke,
     [property: JsonPropertyName("ukedag")] string Ukedag,
-    [property: JsonPropertyName("aar_forskyvning")] int AarForskyvning = 0);
+    [property: JsonPropertyName("aar_forskyvning")] int AarForskyvning = 0,
+    [property: JsonPropertyName("fra_dag")] int? FraDag = null);
 
 /// <summary>
 /// Parametre for <see cref="Regeltype.RelativTilMilepael"/>: forskyvning i dager fra et anker-løps

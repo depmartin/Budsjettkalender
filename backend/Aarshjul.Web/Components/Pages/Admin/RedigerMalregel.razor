@@ -117,7 +117,7 @@ else
     private static string Hjelpetekst(Regeltype type) => type switch
     {
         Regeltype.FastDato => "Fast dato: { \"maaned\": 7, \"dag\": 20, \"aar_forskyvning\": 0 }. aar_forskyvning plasserer fristen i kalenderår = budsjettår + forskyvning.",
-        Regeltype.RelativUkedag => "Relativ ukedag: { \"maaned\": 3, \"uke\": 2, \"ukedag\": \"man\", \"aar_forskyvning\": 0 }. ukedag: man/tir/ons/tor/fre/lor/son.",
+        Regeltype.RelativUkedag => "Relativ ukedag: n-te forekomst { \"maaned\": 3, \"uke\": 2, \"ukedag\": \"man\" } (andre mandag i mars), ELLER første ukedag på/etter en dag { \"maaned\": 7, \"ukedag\": \"man\", \"fra_dag\": 20 } (mandagen i uken 20.–26. juli). Valgfritt aar_forskyvning. ukedag: man/tir/ons/tor/fre/lor/son.",
         Regeltype.RelativTilMilepael => "Relativ til milepæl: { \"anker_loep\": \"fremleggelse\", \"offset_dager\": -7 }. Fristen flytter seg med ankeret.",
         _ => ""
     };

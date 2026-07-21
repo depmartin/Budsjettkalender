@@ -106,6 +106,14 @@ public class Maltjeneste(AppDbContext db) : IMaltjeneste
                 case Regeltype.RelativUkedag:
                     var u = Regelparser.RelativUkedag(inndata.Regelparametre);
                     Regelparser.TolkUkedag(u.Ukedag);
+                    if (u.Maaned is < 1 or > 12)
+                    {
+                        throw new Valideringsfeil("Måned må være 1–12.");
+                    }
+                    if (u.FraDag is int fd && (fd < 1 || fd > 31))
+                    {
+                        throw new Valideringsfeil("«fra_dag» må være mellom 1 og 31.");
+                    }
                     break;
                 case Regeltype.RelativTilMilepael:
                     var m = Regelparser.RelativTilMilepael(inndata.Regelparametre);
