@@ -210,6 +210,16 @@ En automatisk innhenting som svikter stille er verre enn ingen automatikk, fordi
 
 Informasjon som må ivaretas: tidspunkt for siste vellykkede oppdagelse og siste vellykkede nedlasting/uttrekk hver for seg, og en forsøksteller per dokument som er oppdaget men ennå ikke ferdig behandlet.
 
+### 4.13 Laste opp et dokument for uttrekk
+
+Som administrator vil jeg kunne laste opp et dokument (PDF) manuelt og få løsningen til å lese gjennom det og finne mulige frister — på samme måte som den gjør automatisk for rundskriv fra regjeringen.no — slik at jeg kan få frister ut av dokumenter som ikke kommer via den automatiske kilden (eller før kilden er koblet på).
+
+Løsningen trekker ut teksten, tolker den til fristfelter, klassifiserer på løp/kategori, og legger resultatet som forslag i den vanlige godkjenningskøen — med tekstutdrag, per-felt-tolkning og usikkerhetsflagg, akkurat som et robotforslag fra den automatiske innhentingen. Jeg gjennomgår, justerer og godkjenner forslagene på vanlig måte; ingenting publiseres før jeg godkjenner det. Dette er en fast del av løsningen, både i demo og i endelig utgave.
+
+Opplasting er forbeholdt administrator. En bidragsyter kan **ikke** laste opp dokumenter — bidragsytere melder inn frister via forslagsskjemaet (3.1). Dette holder den maskinelle uttrekksveien som en administratorstyrt inntakskanal.
+
+Informasjon som må ivaretas: koblingen fra hvert forslag til det opplastede dokumentet, tekstutdraget hvert felt er tolket fra, og at opplastede dokumenter registreres slik at samme dokument ikke gir dublettforslag ved ny opplasting.
+
 ---
 
 ## 5. Leser i fagdepartement (`FAG`)

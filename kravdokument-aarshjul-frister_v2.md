@@ -34,6 +34,7 @@ Alle ansatte i departementene kan logge inn via Entra ID (departementenes SSO). 
 | Se frister (innenfor sine grupper) | ja | ja | ja |
 | Sende inn forslag | ja | ja | nei |
 | Godkjenne, endre, generere, slette | ja | nei | nei |
+| Laste opp dokumenter for uttrekk (4.5) | ja | nei | nei |
 | Utpeke andre administratorer | ja | nei | nei |
 
 Funksjonsrettighet er uavhengig av synlighetsgruppe (2.3). En bruker har én funksjonsrolle og én eller flere synlighetsgrupper.
@@ -222,6 +223,12 @@ Nummeret brukes kun som svakt hint/validering, aldri som nøkkel — det kan ski
 ### 4.4 Datouttrekk fra PDF
 
 Rundskrivene er tekstbaserte. Fristene står typisk i en tidsplan-/kalenderseksjon, ofte som tabell («Frist for innsending av satsingsforslag 23. januar 2026») eller punktliste. Uttrekket er det vanskeligste trinnet og blir aldri feilfritt; bruk språkmodell til tolkning framfor faste regex der formuleringene varierer. Noen frister er relative i kilden («ultimo mars», «innen seks dager etter Stortingets åpning») — disse mappes til gjentaksregler, ikke harde datoer. Alt uttrekk er forslag til godkjenningskøen, aldri direkte publisering.
+
+### 4.5 Manuell opplasting av dokumenter
+
+I tillegg til automatisk innhenting fra en kilde kan **administrator laste opp et dokument** (PDF) manuelt, og løsningen gjør **samme gjennomlesning/uttrekk** av det som for dokumenter hentet fra regjeringen.no: teksten trekkes ut, tolkes til per-felt-resultat (dato, tittel, m.m.), klassifiseres på løp/kategori (totrinns, 4.3), og resultatet legges som forslag i godkjenningskøen med per-felt uttrekksbevis og usikkerhetsflagg. Dette er en **permanent funksjon** (både i demo og endelig utgave), ikke en midlertidig testvei.
+
+Opplasting er en alternativ **inntaksmåte** foran det samme uttrekks- og køleddet — den hopper over kildeleddets `oppdag()`/`hent()` (4.1) og er derfor uavhengig av at kilden er tilgjengelig. Uttrekket bruker det samme utbyttbare `Datouttrekk`-leddet (4.4): en språkmodell der den er tilgjengelig, ellers et deterministisk offline-uttrekk. **Opplasting er forbeholdt administrator** — bidragsytere kan kun sende inn egne forslag via skjema (5.3), ikke gjennom å laste opp dokumenter. Som alt annet uttrekk går opplastede frister aldri rett til publisering; de passerer godkjenningskøen.
 
 ---
 

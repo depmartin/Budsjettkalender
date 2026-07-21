@@ -10,11 +10,12 @@ fase 1-koden bor, og @.claude/rules/beslutningslogg.md for fremdrift og åpne fo
 Kravgrunnlag: @kravdokument-aarshjul-frister_v2.md kap. 4, 5, 8, 9.5;
 @SYSTEMARKITEKTUR.md kap. 3.2, 3.4, 5, 6, 9.
 
-> STATUS (PR #5, 94 tester grønt): **Kodet** — Steg A, D, F, G, H, I, J, K + `IDatouttrekk`-
-> forberedelse (`Aarshjul.Application/Datouttrekk`) + EF-migrasjon `Fase2Innhenting`.
+> STATUS: **Kodet** — Steg A, D, F, G, H, I, J, K (PR #5) + `IDatouttrekk`-forberedelse +
+> EF-migrasjon `Fase2Innhenting`. **Steg M (manuell dokumentopplasting) KODET 2026-07-21**
+> (ikke egress-blokkert) — tar i bruk `IDatouttrekk` med en heuristisk offline-implementasjon.
 > **Blokkert til egress mot `www.regjeringen.no` åpnes** — Steg B (oppdagelse), C (dedup +
 > auto-versjonsmatching + «foreslått fjernet» + forkastet-liste), E (live `hent()`/
-> datouttrekk), L (bakgrunnsjobb). Disse krever live kilde; bygg dem først når egress er på plass.
+> datouttrekk fra kilde), L (bakgrunnsjobb). Disse krever live kilde; bygg dem når egress er på plass.
 
 ---
 
@@ -207,6 +208,25 @@ timer-utløst Azure Functions/container-jobb. Form bekreftes i fasen (arkitektur
 vellykkede innhenting» (liveness-sporet fra kap. 3), der `oppdag()` og `hent()`/uttrekk
 spores hver for seg. Et dokument som gjentatte ganger feiler i `hent()` flagges til
 administrator når forsøksgrensen er nådd — det forsvinner aldri stille.
+
+### Steg M — Manuell dokumentopplasting  ✔ (KODET 2026-07-21, ikke egress-blokkert)
+Permanent administratorfunksjon: last opp et dokument (PDF) og kjør **samme uttrekk og
+klassifisering** som automatisk innhenting, uten kildeleddets `oppdag()`/`hent()`.
+- **PDF-tekst:** eget byttbart ledd `IPdftekst`/`PdftekstLeser` (PdfPig, ren .NET, offline).
+- **Uttrekk:** konkret `IDatouttrekk`-implementasjon `HeuristiskDatouttrekk` (deterministisk,
+  offline) — finner dato/tittel uten språkmodell. Claude-API-varianten (Steg E) plugges inn
+  bak samme grensesnitt senere uten ombygging. Dette låser opp `IDatouttrekk`-bruken som var
+  forberedt men ubrukt.
+- **Intake:** `IDokumentopplasting`/`OpplastingsTjeneste` segmenterer teksten (linjer med
+  gjenkjennelig dato), kjører uttrekk + `Totrinnsfilter`-klassifisering per avsnitt, og lager
+  `Forslag` (`Opphav = Robot`, kilde «Opplastet: «filnavn»») med `UttrekksBevis` i den vanlige
+  køen. Dokumentet registreres i `BehandletDokument` (kilde «opplastet», dedup på filnavn +
+  innholdshash). Ingenting publiseres uten godkjenning.
+- **Flate:** `/admin/last-opp` (`InputFile`, kun `ErAdministrator`). Bidragsytere kan ikke
+  laste opp — de bruker forslagsskjemaet (Steg H).
+- **Tilhørende fiks:** Blazor-appen manglet `@rendermode="InteractiveServer"` (satt på
+  `Routes`/`HeadOutlet` i `App.razor`), så interaktive handlinger (opplasting, godkjenn, generér)
+  virker nå. 12 nye tester; PdfPig-tekstuttrekk verifiseres av admins reelle opplasting.
 
 ## 5. Det avgjørende kvalitetskravet
 - **Ingenting publiseres uten godkjenning** — alt uttrekk og alle bruker-/
