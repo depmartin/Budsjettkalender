@@ -11,7 +11,7 @@ Drift på Azure med infrastruktur som kode (Bicep).
 
 ## Prøv demoen (uten å installere .NET lokalt)
 
-Løsningen har en **lokal demo-modus** (miljø `Demo`) med SQLite og en dev-innlogging, uten
+Løsningen har en **lokal demo-modus** med SQLite og en dev-innlogging, uten
 Azure SQL eller Entra. Den kan kjøres i nettleseren via **GitHub Codespaces** — da kjører alt
 i skyen, og du trenger ikke laste ned .NET til egen maskin:
 
@@ -33,8 +33,12 @@ i skyen, og du trenger ikke laste ned .NET til egen maskin:
 Kjøre lokalt (krever [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)):
 
 ```
-ASPNETCORE_ENVIRONMENT=Demo dotnet run --project backend/Aarshjul.Web
+dotnet run --project backend/Aarshjul.Web --launch-profile demo
 ```
+
+Åpne så `http://localhost:5014/demo`. Demo-profilen kjører i `Development`-miljøet med
+konfig-flagget `Demo=true` (SQLite + dev-innlogging + demo-data), slik at `dotnet run`
+serverer statiske filer riktig.
 
 ## Dokumentasjon
 

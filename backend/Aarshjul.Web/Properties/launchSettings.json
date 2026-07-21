@@ -26,7 +26,8 @@
         "launchUrl": "demo",
         "applicationUrl": "http://localhost:5014",
         "environmentVariables": {
-          "ASPNETCORE_ENVIRONMENT": "Demo"
+          "ASPNETCORE_ENVIRONMENT": "Development",
+          "Demo": "true"
         }
       }
     }
