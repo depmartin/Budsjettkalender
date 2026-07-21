@@ -13,8 +13,8 @@ Fase 2-planen ligger i @fase2-plan.md.
 Kravgrunnlag: @kravdokument-aarshjul-frister_v2.md kap. 3.3, 5.4, 6;
 @SYSTEMARKITEKTUR.md kap. 3.1, 3.3, 7, 8; @BRUKERHISTORIER.md 2.4, 4.5.
 
-> STATUS: **Fase 3 KODET 2026-06-19 (Steg A–G), 125 tester grønt** på gren
-> `claude/cool-clarke-vm4uoi`. Implementert: `Datoberegning` (FastDato/NteUkedag/Virkedagjuster) +
+> STATUS: **Fase 3 KODET 2026-06-19 (Steg A–G) — merget til `main` (PR #6).**
+> Implementert: `Datoberegning` (FastDato/NteUkedag/Virkedagjuster) +
 > `Valgaar`, typede regelparametre + `Regelparser` (med nytt `aar_forskyvning`-felt),
 > `Genereringsberegning` (ren) + `GenereringsTjeneste`, konfig-drevet `Synlighetsregel`,
 > `Maltjeneste`, og flatene `/admin/generer` + `/admin/mal`. EF-migrasjon `Fase3Generering` la til
