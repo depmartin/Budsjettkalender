@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Aarshjul.Application.Datouttrekk;
 using Aarshjul.Application.Generering;
 using Aarshjul.Application.Opplasting;
@@ -45,11 +46,12 @@ public sealed class OpplastingsTjeneste(
             };
         }
 
-        // Kandidatavsnitt: linjer som inneholder en gjenkjennelig dato (ikke bare et årstall).
-        var kandidater = tekst
-            .Split('\n')
-            .Select(l => l.Trim())
-            .Where(l => l.Length >= 8 && Datogjenkjenning.InneholderDato(l))
+        // Kandidatavsnitt: hele SETNINGER som inneholder en gjenkjennelig dato (ikke bare et
+        // årstall) — ikke bare første linje. Slår sammen linjeskift til mellomrom og deler på
+        // setningsslutt (.!?) etterfulgt av stor forbokstav, slik at norske ordenstall som
+        // «23. januar» (liten forbokstav etter punktum) ikke splittes.
+        var kandidater = DelISetninger(tekst)
+            .Where(s => s.Length >= 8 && Datogjenkjenning.InneholderDato(s))
             .Take(MaksKandidater)
             .ToList();
 
@@ -134,6 +136,17 @@ public sealed class OpplastingsTjeneste(
                 ? "Fant datoer, men klarte ikke tolke dem til frister. Du kan legge inn manuelt."
                 : null
         };
+    }
+
+    /// <summary>Deler dokumentteksten i setninger. Linjeskift blir mellomrom (så en frist som er
+    /// brutt over flere linjer holdes samlet), og det deles kun på .!? fulgt av mellomrom og stor
+    /// forbokstav — norske datoer som «23. januar» (liten forbokstav) splittes derfor ikke.</summary>
+    private static IEnumerable<string> DelISetninger(string tekst)
+    {
+        var normalisert = Regex.Replace(tekst.Replace('\n', ' ').Replace('\r', ' '), @"\s+", " ").Trim();
+        return Regex.Split(normalisert, @"(?<=[.!?])\s+(?=[A-ZÆØÅ])")
+            .Select(s => s.Trim())
+            .Where(s => s.Length > 0);
     }
 
     private static string Normaliser(string filnavn)

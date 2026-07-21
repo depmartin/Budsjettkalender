@@ -8,8 +8,8 @@
         {
             <label class="filtervalg">
                 <input type="checkbox"
-                       checked="@Tilstand.Kategorier.Contains(kategori)"
-                       @onchange="e => Tilstand.VekslKategori(kategori, (bool)e.Value!)" />
+                       @bind:get="Tilstand.Kategorier.Contains(kategori)"
+                       @bind:set="på => Tilstand.VekslKategori(kategori, på)" />
                 @Visningformat.KategoriNavn(kategori)
             </label>
         }
@@ -23,8 +23,8 @@
             {
                 <label class="filtervalg">
                     <input type="checkbox"
-                           checked="@Tilstand.Budsjettaar.Contains(aar)"
-                           @onchange="e => Tilstand.VekslBudsjettaar(aar, (bool)e.Value!)" />
+                           @bind:get="Tilstand.Budsjettaar.Contains(aar)"
+                           @bind:set="på => Tilstand.VekslBudsjettaar(aar, på)" />
                     @aar
                 </label>
             }
@@ -34,8 +34,8 @@
 
     <label class="filtervalg">
         <input type="checkbox"
-               checked="@Tilstand.InkluderHistorikk"
-               @onchange="e => Tilstand.SettHistorikk((bool)e.Value!)" />
+               @bind:get="Tilstand.InkluderHistorikk"
+               @bind:set="Tilstand.SettHistorikk" />
         Vis historikk
     </label>
 </div>

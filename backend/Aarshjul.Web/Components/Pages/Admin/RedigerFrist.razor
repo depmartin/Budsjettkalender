@@ -97,8 +97,8 @@ else
                 {
                     <label class="filtervalg @(gruppe.Kode == "POL" ? "pol-valg" : "")">
                         <input type="checkbox"
-                               checked="@_inndata.Synlighetskoder.Contains(gruppe.Kode)"
-                               @onchange="e => VekslGruppe(gruppe.Kode, (bool)e.Value!)" />
+                               @bind:get="_inndata.Synlighetskoder.Contains(gruppe.Kode)"
+                               @bind:set="på => VekslGruppe(gruppe.Kode, på)" />
                         @gruppe.Navn (@gruppe.Kode)
                     </label>
                 }

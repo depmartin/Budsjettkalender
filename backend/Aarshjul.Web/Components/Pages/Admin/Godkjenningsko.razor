@@ -129,8 +129,8 @@ else
                                 {
                                     <label class="filtervalg @(grp.Kode == Pol ? "pol-valg" : "")">
                                         <input type="checkbox"
-                                               checked="@t.Koder.Contains(grp.Kode)"
-                                               @onchange="ev => VekslKode(t, grp.Kode, (bool)ev.Value!)" />
+                                               @bind:get="t.Koder.Contains(grp.Kode)"
+                                               @bind:set="på => VekslKode(t, grp.Kode, på)" />
                                         @grp.Navn (@grp.Kode)
                                     </label>
                                 }
