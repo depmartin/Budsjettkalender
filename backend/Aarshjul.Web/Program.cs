@@ -31,8 +31,12 @@ using Microsoft.Identity.Web.UI;
 var builder = WebApplication.CreateBuilder(args);
 var erTesting = builder.Environment.IsEnvironment("Testing");
 // Demo-modus: lokal kjøring uten Azure SQL/Entra (SQLite + dev-innlogging + demo-data).
-// Rører ikke produksjonsstien. Aktiveres med ASPNETCORE_ENVIRONMENT=Demo.
-var erDemo = builder.Environment.IsEnvironment("Demo");
+// Rører ikke produksjonsstien. Aktiveres med konfig-flagget Demo=true (anbefalt, sammen med
+// miljøet Development slik at `dotnet run` serverer statiske assets riktig) ELLER med
+// ASPNETCORE_ENVIRONMENT=Demo (krever publiserte assets, dvs. `dotnet publish` + kjør DLL-en —
+// `MapStaticAssets` i et ikke-Development-miljø forventer publisert asset-layout).
+var erDemo = builder.Configuration.GetValue<bool>("Demo")
+             || builder.Environment.IsEnvironment("Demo");
 var brukEntra = !erTesting && !erDemo;
 
 // --- Database. Produksjon: Azure SQL. Demo: SQLite-fil. Test: registreres av testene. ---
