@@ -124,6 +124,10 @@ Køen er en felles innboks for forslag fra både den automatiske innhentingen og
 
 Handlingene per kort er å godkjenne, justere (åpner redigeringsskjema, deretter godkjenne), eller avvise. For forslag den automatiske innhentingen ikke klarte å kategorisere («ukjent type») er handlingene å vurdere (manuell kategorisering) eller avvise.
 
+Ved avvisning kan administrator legge ved en kort begrunnelse **kun for forslag fra bidragsytere** — begrunnelsen blir et varsel til innsenderen (3.3). Robot-forslag og opplastede dokumenter har ingen innsender å varsle, så begrunnelsesfeltet tilbys ikke for dem.
+
+Administrator går ikke selv via forslag-/køleddet: endringer administrator gjør på en publisert frist skjer ved **direkte redigering** (fra fristkortets «Rediger», som åpner redigeringsskjemaet og publiserer med én gang), ikke ved å sende inn et forslag til egen kø. «Mine forslag» og varsel-innboksen er derfor bidragsyterens flater, ikke administratorens.
+
 Informasjon som må ivaretas: per forslag dets opphav (robot eller bruker), kilde eller innsenders navn, alle fristens felter, og foreslått synlighet.
 
 ### 4.2 Verifisere et automatisk uttrekk mot kilden
@@ -221,6 +225,16 @@ Løsningen trekker ut teksten, tolker den til fristfelter, klassifiserer på lø
 Opplasting er forbeholdt administrator. En bidragsyter kan **ikke** laste opp dokumenter — bidragsytere melder inn frister via forslagsskjemaet (3.1). Dette holder den maskinelle uttrekksveien som en administratorstyrt inntakskanal.
 
 Informasjon som må ivaretas: koblingen fra hvert forslag til det opplastede dokumentet, tekstutdraget hvert felt er tolket fra, og at opplastede dokumenter registreres slik at samme dokument ikke gir dublettforslag ved ny opplasting.
+
+### 4.14 Eksportere og importere alle frister (database)
+
+Som administrator vil jeg kunne laste ned alle frister som én fil, og laste den opp igjen senere, slik at jeg har en flyttbar sikkerhetskopi av hele fristoversikten og kan gjenopprette den.
+
+Eksporten er én JSON-fil som inneholder alle frister med de feltene som trengs for å gjenskape dem — tittel, dato og datopresisjon, budsjettår, kategori, løp, kilde, notat, status, opphav og hvilke synlighetsgrupper hver frist er delt med. Importen bruker **erstatt-alt**: de eksisterende fristene fjernes, og fila blir fasiten. Fordi det er en irreversibel operasjon, krever grensesnittet en aktiv «er du sikker? (erstatt alt)»-bekreftelse, og oppfordrer til å ta en eksport som sikkerhetskopi først. Synlighetskoder i fila som ikke finnes som grupper i mottakende løsning, hoppes over med en advarsel, slik at en import aldri bryter på en ukjent gruppe.
+
+Dette er en administratorfunksjon. Fila inneholder også FIN-interne frister; nedlasting og opplasting skjer i backend som en bevisst administratorhandling, ikke gjennom den synlighetsfiltrerte leseflaten. Bidragsytere og lesere har ikke funksjonen.
+
+Informasjon som må ivaretas: alle fristfeltene og hver frists synlighetsgrupper, samt et versjonsnummer på formatet slik at eldre filer fortsatt kan tolkes.
 
 ---
 

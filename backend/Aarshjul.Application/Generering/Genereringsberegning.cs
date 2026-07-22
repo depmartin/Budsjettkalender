@@ -80,7 +80,43 @@ public sealed class Genereringsberegning
             maalbudsjettaar, perLoep,
             manuelleAnkre ?? new Dictionary<string, DateOnly>(StringComparer.OrdinalIgnoreCase));
 
-        return regler.Select(r => beregning.Resolve(r.Loep, new HashSet<string>(StringComparer.OrdinalIgnoreCase))).ToList();
+        // Beregn hver regel for seg (én frist per regel). Flere regler kan dele løp — da
+        // beregnes begge, ingen slukes stilltiende. Løp brukes fortsatt som nøkkel når en
+        // RelativTilMilepael-regel skal finne ankeret sitt (representanten er den første
+        // regelen for løpet, jf. `perLoep`).
+        return regler
+            .Select(r => beregning.BeregnRegel(r, new HashSet<string>(StringComparer.OrdinalIgnoreCase)))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Beregner én konkret regel (top-nivå). Anker-oppslag for <see cref="Regeltype.RelativTilMilepael"/>
+    /// skjer per løp via <see cref="Resolve"/>. I motsetning til <see cref="Resolve"/> memoiseres ikke
+    /// resultatet på løp, slik at to regler med samme løp begge beregnes.
+    /// </summary>
+    private BeregnetRegel BeregnRegel(Gjentaksregel regel, HashSet<string> besoeker)
+    {
+        // Manuelt satt anker for denne regelens løp overstyrer beregning (to-trinns flyt).
+        if (_manuelleAnkre.TryGetValue(regel.Loep, out var manueltSatt))
+        {
+            return new BeregnetRegel { Regel = regel, Dato = manueltSatt };
+        }
+
+        if (!besoeker.Add(regel.Loep))
+        {
+            return new BeregnetRegel { Regel = regel, Feil = $"Sirkulær anker-kjede oppdaget ved «{regel.Loep}»." };
+        }
+
+        var resultat = regel.Regeltype switch
+        {
+            Regeltype.FastDato => BeregnFastDato(regel),
+            Regeltype.RelativUkedag => BeregnRelativUkedag(regel),
+            Regeltype.RelativTilMilepael => BeregnRelativTilMilepael(regel, besoeker),
+            _ => new BeregnetRegel { Regel = regel, Feil = $"Ukjent regeltype for «{regel.Loep}»." }
+        };
+
+        besoeker.Remove(regel.Loep);
+        return resultat;
     }
 
     private BeregnetRegel Resolve(string loep, HashSet<string> besoeker)

@@ -1,5 +1,5 @@
 @page "/forslag/mine"
-@attribute [Authorize(Policy = Autorisasjon.KanForeslaa)]
+@attribute [Authorize(Policy = Autorisasjon.ErBidragsyter)]
 @inject IForslagsinnsending Innsending
 @inject Gjeldendebrukerkilde Brukerkilde
 @inject NavigationManager Nav

@@ -1,5 +1,6 @@
 using Aarshjul.Application.Brukere;
 using Aarshjul.Application.Brukerforslag;
+using Aarshjul.Application.Datautveksling;
 using Aarshjul.Application.Datouttrekk;
 using Aarshjul.Application.Frister;
 using Aarshjul.Application.Generering;
@@ -12,6 +13,7 @@ using Aarshjul.Application.Varsler;
 using Aarshjul.Infrastructure;
 using Aarshjul.Infrastructure.Brukere;
 using Aarshjul.Infrastructure.Brukerforslag;
+using Aarshjul.Infrastructure.Datautveksling;
 using Aarshjul.Infrastructure.Datouttrekk;
 using Aarshjul.Infrastructure.Frister;
 using Aarshjul.Infrastructure.Generering;
@@ -80,6 +82,7 @@ builder.Services.AddScoped<IWordEksport, WordEksportTjeneste>();
 builder.Services.AddSingleton<ISynlighetsregel, Synlighetsregel>();
 builder.Services.AddScoped<IGenereringstjeneste, GenereringsTjeneste>();
 builder.Services.AddScoped<IMaltjeneste, Maltjeneste>();
+builder.Services.AddScoped<IFristDatautveksling, FristDatautveksling>();
 // Datouttrekk + manuell dokumentopplasting (samme uttrekksledd som automatisk innhenting).
 // Heuristisk (offline) uttrekk nå; Claude-API-implementasjonen plugges inn bak IDatouttrekk (Steg E).
 builder.Services.AddSingleton<IPdftekst, PdftekstLeser>();

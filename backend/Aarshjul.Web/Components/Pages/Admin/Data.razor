@@ -1,0 +1,144 @@
+@page "/admin/data"
+@using System.Text.Json
+@using Aarshjul.Application.Datautveksling
+@using Aarshjul.Web.Api
+@attribute [Authorize(Policy = Autorisasjon.ErAdministrator)]
+@inject IFristDatautveksling Utveksling
+
+<PageTitle>Eksporter / importer frister</PageTitle>
+
+<h1>Eksporter / importer frister</h1>
+
+<p class="melding">
+    Last ned alle frister som en JSON-«database» (med synlighet, budsjettår, kategori, løp og notat),
+    og last den opp igjen senere for å gjenopprette. Dette er en administratorfunksjon.
+</p>
+
+<section class="skjema">
+    <h2>Eksporter</h2>
+    <p class="melding">Laster ned én JSON-fil med alle frister.</p>
+    <div class="skjemarad">
+        <a class="knapp knapp-primær" href="/api/eksport/frister-json" download>Last ned frister (JSON)</a>
+    </div>
+</section>
+
+<section class="skjema">
+    <h2>Importer</h2>
+    <div class="feil" role="note">
+        <strong>Erstatter alt.</strong> Import fjerner alle eksisterende frister og legger inn dem fra
+        fila. Ta gjerne en eksport først som sikkerhetskopi.
+    </div>
+
+    <label>Fil (JSON)
+        <InputFile OnChange="VelgFil" accept=".json" />
+    </label>
+
+    @if (_valgtNavn is not null)
+    {
+        <p class="melding">Valgt fil: <strong>@_valgtNavn</strong> (@_valgtStr)</p>
+    }
+
+    @if (_feil is not null)
+    {
+        <div class="feil">@_feil</div>
+    }
+
+    @if (_resultat is { } r)
+    {
+        <div class="melding">
+            Importerte <strong>@r.AntallImportert</strong> frister (erstattet @r.AntallErstattet).
+            @if (r.Advarsler.Count > 0)
+            {
+                <ul>
+                    @foreach (var a in r.Advarsler)
+                    {
+                        <li>@a</li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+
+    <div class="skjemarad">
+        @if (!_bekreft)
+        {
+            <button class="knapp knapp-primær" @onclick="() => _bekreft = true" disabled="@(_fil is null || _arbeider)">
+                Importer (erstatt alt)
+            </button>
+        }
+        else
+        {
+            <span class="melding">Er du sikker? Dette fjerner alle eksisterende frister.</span>
+            <button class="knapp knapp-primær" @onclick="Importer" disabled="@_arbeider">
+                @(_arbeider ? "Importerer …" : "Ja, erstatt alt")
+            </button>
+            <button class="knapp" @onclick="() => _bekreft = false" disabled="@_arbeider">Avbryt</button>
+        }
+    </div>
+</section>
+
+@code {
+    private const long MaksStorrelse = 25 * 1024 * 1024; // 25 MB
+
+    private IBrowserFile? _fil;
+    private string? _valgtNavn;
+    private string? _valgtStr;
+    private ImportResultat? _resultat;
+    private string? _feil;
+    private bool _arbeider;
+    private bool _bekreft;
+
+    private void VelgFil(InputFileChangeEventArgs e)
+    {
+        _resultat = null;
+        _feil = null;
+        _bekreft = false;
+        _fil = e.File;
+        _valgtNavn = e.File.Name;
+        _valgtStr = $"{e.File.Size / 1024} kB";
+
+        if (e.File.Size > MaksStorrelse)
+        {
+            _feil = "Filen er for stor (maks 25 MB).";
+            _fil = null;
+        }
+        else if (!e.File.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            _feil = "Kun JSON-filer støttes.";
+            _fil = null;
+        }
+    }
+
+    private async Task Importer()
+    {
+        if (_fil is null)
+        {
+            return;
+        }
+
+        _arbeider = true;
+        _feil = null;
+        _resultat = null;
+        try
+        {
+            using var ms = new MemoryStream();
+            await _fil.OpenReadStream(MaksStorrelse).CopyToAsync(ms);
+            var database = JsonSerializer.Deserialize<FristDatabase>(ms.ToArray(), FristEndepunkter.DatabaseJson)
+                ?? throw new FormatException("Fila er tom eller ikke gyldig.");
+            _resultat = await Utveksling.ImporterAsync(database);
+            _bekreft = false;
+        }
+        catch (JsonException ex)
+        {
+            _feil = $"Klarte ikke tolke JSON-fila: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            _feil = $"Import feilet: {ex.Message}";
+        }
+        finally
+        {
+            _arbeider = false;
+        }
+    }
+}
