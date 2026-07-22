@@ -109,8 +109,10 @@ public sealed class HeuristiskDatouttrekk : IDatouttrekk
         uten = Regex.Replace(uten, @"\s+", " ").Trim(' ', '-', ':', '.', ',', ';');
         if (string.IsNullOrWhiteSpace(uten))
             uten = avsnitt.Trim();
-        return uten.Length > 180 ? uten[..180].TrimEnd() + "…" : uten;
+        // Ta med hele setningen (romslig grense) framfor bare første ledd.
+        return uten.Length > 400 ? uten[..400].TrimEnd() + "…" : uten;
     }
 
-    private static string Kort(string s) => s.Length > 240 ? s[..240].TrimEnd() + "…" : s;
+    // Romslig grense så hele setningen som hører til fristen kommer med som kildeutdrag.
+    private static string Kort(string s) => s.Length > 600 ? s[..600].TrimEnd() + "…" : s;
 }

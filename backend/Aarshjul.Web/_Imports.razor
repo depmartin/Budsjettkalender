@@ -1,6 +1,12 @@
-@* Prosjektomfattende usings (gjelder også komponenter utenfor Components/). *@
+@* Prosjektomfattende usings (gjelder også komponenter utenfor Components/, som Komponenter/). *@
+@* Microsoft.AspNetCore.Components.Web MÅ være her: direktiv-attributter (@onclick/@bind/@onchange)
+   er definert i dette namespacet. Uten det kompileres de som bokstavelige HTML-attributter og
+   bryter interaktiviteten (f.eks. filtrene i Filterpanel). *@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Routing
 @using Aarshjul.Domain
 @using Aarshjul.Application
 @using Aarshjul.Application.Brukere
