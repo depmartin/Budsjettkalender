@@ -236,6 +236,10 @@ Dette er en administratorfunksjon. Fila inneholder også FIN-interne frister; ne
 
 Informasjon som må ivaretas: alle fristfeltene og hver frists synlighetsgrupper, samt et versjonsnummer på formatet slik at eldre filer fortsatt kan tolkes.
 
+På samme flate kan administrator også **eksportere og importere alle årsmaler (gjentaksregler)** som en tilsvarende JSON-«database» (2026-07-22), med samme erstatt-alt-semantikk og bekreftelse. Regler med parametre som ikke lar seg tolke for regeltypen, hoppes over ved import med en advarsel, slik at en senere generering ikke feiler på en ugyldig regel.
+
+Når administrator oppretter eller redigerer en malregel av typen «relativ til milepæl», velges milepælen fra en **nedtrekksliste over eksisterende malregler** framfor å skrive anker-løpet manuelt, og administrator angir hvor mange dager før/etter milepælen fristen skal ligge. Dette gjør det enklere å koble en ny hendelse til en eksisterende (f.eks. «én uke etter innspill til rammefordelingsforslag»).
+
 ---
 
 ## 5. Leser i fagdepartement (`FAG`)
