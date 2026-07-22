@@ -22,6 +22,8 @@ Disse historiene gjelder enhver innlogget bruker, uavhengig av funksjonsrolle, f
 
 ### 2.1 Møtet med løsningen — landingsflaten
 
+> **Statusnote (2026-07-22):** Den *separate* landingsvisningen («Nå») er inntil videre fjernet fra grensesnittet som en forenkling (den var nær identisk med kalendervisningen); Kalender er nå inngangssiden. Selve landingslogikken (`HentLandingsutvalgAsync`, union «30 dager / neste 5») og API-et `/api/frister/landing` består og er testet, så denne historien kan gjenopprettes som egen flate uten ny logikk. Se beslutningsloggen 2026-07-22.
+
 Som innlogget bruker vil jeg ved innlogging straks se de fristene som er nær i tid og angår meg, slik at jeg vet hva som kommer uten å lete.
 
 Landingsflaten viser unionen av to kriterier: alle frister innen de neste 30 dagene, og minst de fem førstkommende fristene. Det betyr at brukeren alltid ser noe — i en stille periode uten frister de neste 30 dagene fylles flaten av de fem nærmeste likevel, slik at en tom skjerm aldri oppstår. Visningen er rullerende: den regnes fra inneværende dag hver gang.
