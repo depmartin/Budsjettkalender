@@ -40,6 +40,9 @@ public static class FristEndepunkter
         // JSON-«database» over alle frister (endring #2): full nedlasting til senere import.
         // Kun administrator; inneholder FIN-interne frister, så ingen synlighetsfiltrering her.
         app.MapGet("/api/eksport/frister-json", EksporterJson).RequireAuthorization(Autorisasjon.ErAdministrator);
+
+        // JSON-«database» over alle årsmaler (gjentaksregler). Kun administrator.
+        app.MapGet("/api/eksport/maler-json", EksporterMalerJson).RequireAuthorization(Autorisasjon.ErAdministrator);
     }
 
     /// <summary>Delte JSON-innstillinger for frist-databasen (enum som navn, innrykk for lesbarhet).</summary>
@@ -54,6 +57,14 @@ public static class FristEndepunkter
         var database = await data.EksporterAsync(ct);
         var bytes = JsonSerializer.SerializeToUtf8Bytes(database, DatabaseJson);
         var filnavn = $"frister-database-{database.EksportertTid:yyyyMMdd-HHmmss}.json";
+        return Results.File(bytes, "application/json", filnavn);
+    }
+
+    private static async Task<IResult> EksporterMalerJson(IMalDatautveksling data, CancellationToken ct)
+    {
+        var database = await data.EksporterAsync(ct);
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(database, DatabaseJson);
+        var filnavn = $"aarsmaler-database-{database.EksportertTid:yyyyMMdd-HHmmss}.json";
         return Results.File(bytes, "application/json", filnavn);
     }
 

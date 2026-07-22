@@ -83,6 +83,7 @@ builder.Services.AddSingleton<ISynlighetsregel, Synlighetsregel>();
 builder.Services.AddScoped<IGenereringstjeneste, GenereringsTjeneste>();
 builder.Services.AddScoped<IMaltjeneste, Maltjeneste>();
 builder.Services.AddScoped<IFristDatautveksling, FristDatautveksling>();
+builder.Services.AddScoped<IMalDatautveksling, MalDatautveksling>();
 // Datouttrekk + manuell dokumentopplasting (samme uttrekksledd som automatisk innhenting).
 // Heuristisk (offline) uttrekk nå; Claude-API-implementasjonen plugges inn bak IDatouttrekk (Steg E).
 builder.Services.AddSingleton<IPdftekst, PdftekstLeser>();

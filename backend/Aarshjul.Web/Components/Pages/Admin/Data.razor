@@ -4,75 +4,119 @@
 @using Aarshjul.Web.Api
 @attribute [Authorize(Policy = Autorisasjon.ErAdministrator)]
 @inject IFristDatautveksling Utveksling
+@inject IMalDatautveksling MalUtveksling
 
-<PageTitle>Eksporter / importer frister</PageTitle>
+<PageTitle>Eksporter / importer data</PageTitle>
 
-<h1>Eksporter / importer frister</h1>
+<h1>Eksporter / importer data</h1>
 
 <p class="melding">
-    Last ned alle frister som en JSON-«database» (med synlighet, budsjettår, kategori, løp og notat),
-    og last den opp igjen senere for å gjenopprette. Dette er en administratorfunksjon.
+    Last ned frister eller årsmaler som en JSON-«database», og last opp igjen senere for å
+    gjenopprette. Dette er administratorfunksjoner. Import erstatter alt av den aktuelle typen.
 </p>
 
 <section class="skjema">
-    <h2>Eksporter</h2>
-    <p class="melding">Laster ned én JSON-fil med alle frister.</p>
+    <h2>Frister</h2>
+    <p class="melding">Alle frister med synlighet, budsjettår, kategori, løp og notat.</p>
     <div class="skjemarad">
         <a class="knapp knapp-primær" href="/api/eksport/frister-json" download>Last ned frister (JSON)</a>
     </div>
-</section>
 
-<section class="skjema">
-    <h2>Importer</h2>
     <div class="feil" role="note">
         <strong>Erstatter alt.</strong> Import fjerner alle eksisterende frister og legger inn dem fra
         fila. Ta gjerne en eksport først som sikkerhetskopi.
     </div>
 
     <label>Fil (JSON)
-        <InputFile OnChange="VelgFil" accept=".json" />
+        <InputFile OnChange="VelgFristfil" accept=".json" />
     </label>
 
-    @if (_valgtNavn is not null)
+    @if (_fristNavn is not null)
     {
-        <p class="melding">Valgt fil: <strong>@_valgtNavn</strong> (@_valgtStr)</p>
+        <p class="melding">Valgt fil: <strong>@_fristNavn</strong> (@_fristStr)</p>
     }
-
-    @if (_feil is not null)
+    @if (_fristFeil is not null)
     {
-        <div class="feil">@_feil</div>
+        <div class="feil">@_fristFeil</div>
     }
-
-    @if (_resultat is { } r)
+    @if (_fristResultat is { } r)
     {
         <div class="melding">
             Importerte <strong>@r.AntallImportert</strong> frister (erstattet @r.AntallErstattet).
             @if (r.Advarsler.Count > 0)
             {
-                <ul>
-                    @foreach (var a in r.Advarsler)
-                    {
-                        <li>@a</li>
-                    }
-                </ul>
+                <ul>@foreach (var a in r.Advarsler) { <li>@a</li> }</ul>
             }
         </div>
     }
 
     <div class="skjemarad">
-        @if (!_bekreft)
+        @if (!_fristBekreft)
         {
-            <button class="knapp knapp-primær" @onclick="() => _bekreft = true" disabled="@(_fil is null || _arbeider)">
-                Importer (erstatt alt)
+            <button class="knapp knapp-primær" @onclick="() => _fristBekreft = true" disabled="@(_fristFil is null || _fristArbeider)">
+                Importer frister (erstatt alt)
             </button>
         }
         else
         {
             <span class="melding">Er du sikker? Dette fjerner alle eksisterende frister.</span>
-            <button class="knapp knapp-primær" @onclick="Importer" disabled="@_arbeider">
-                @(_arbeider ? "Importerer …" : "Ja, erstatt alt")
+            <button class="knapp knapp-primær" @onclick="ImporterFrister" disabled="@_fristArbeider">
+                @(_fristArbeider ? "Importerer …" : "Ja, erstatt alt")
             </button>
-            <button class="knapp" @onclick="() => _bekreft = false" disabled="@_arbeider">Avbryt</button>
+            <button class="knapp" @onclick="() => _fristBekreft = false" disabled="@_fristArbeider">Avbryt</button>
+        }
+    </div>
+</section>
+
+<section class="skjema">
+    <h2>Årsmaler (gjentaksregler)</h2>
+    <p class="melding">Alle malregler med løp, tittel, kategori, regeltype og parametre.</p>
+    <div class="skjemarad">
+        <a class="knapp knapp-primær" href="/api/eksport/maler-json" download>Last ned årsmaler (JSON)</a>
+    </div>
+
+    <div class="feil" role="note">
+        <strong>Erstatter alt.</strong> Import fjerner alle eksisterende malregler og legger inn dem fra
+        fila. Ta gjerne en eksport først som sikkerhetskopi.
+    </div>
+
+    <label>Fil (JSON)
+        <InputFile OnChange="VelgMalfil" accept=".json" />
+    </label>
+
+    @if (_malNavn is not null)
+    {
+        <p class="melding">Valgt fil: <strong>@_malNavn</strong> (@_malStr)</p>
+    }
+    @if (_malFeil is not null)
+    {
+        <div class="feil">@_malFeil</div>
+    }
+    @if (_malResultat is { } mr)
+    {
+        <div class="melding">
+            Importerte <strong>@mr.AntallImportert</strong> malregler (erstattet @mr.AntallErstattet).
+            @if (mr.Advarsler.Count > 0)
+            {
+                <ul>@foreach (var a in mr.Advarsler) { <li>@a</li> }</ul>
+            }
+        </div>
+    }
+
+    <div class="skjemarad">
+        @if (!_malBekreft)
+        {
+            <button class="knapp knapp-primær" @onclick="() => _malBekreft = true" disabled="@(_malFil is null || _malArbeider)">
+                Importer årsmaler (erstatt alt)
+            </button>
+        }
+        else
+        {
+            <span class="melding">Er du sikker? Dette fjerner alle eksisterende malregler.</span>
+            <button class="knapp knapp-primær" @onclick="ImporterMaler" disabled="@_malArbeider">
+                @(_malArbeider ? "Importerer …" : "Ja, erstatt alt")
+            </button>
+            <button class="knapp" @onclick="() => _malBekreft = false" disabled="@_malArbeider">Avbryt</button>
         }
     </div>
 </section>
@@ -80,65 +124,92 @@
 @code {
     private const long MaksStorrelse = 25 * 1024 * 1024; // 25 MB
 
-    private IBrowserFile? _fil;
-    private string? _valgtNavn;
-    private string? _valgtStr;
-    private ImportResultat? _resultat;
-    private string? _feil;
-    private bool _arbeider;
-    private bool _bekreft;
+    // --- Frister ---
+    private IBrowserFile? _fristFil;
+    private string? _fristNavn;
+    private string? _fristStr;
+    private ImportResultat? _fristResultat;
+    private string? _fristFeil;
+    private bool _fristArbeider;
+    private bool _fristBekreft;
 
-    private void VelgFil(InputFileChangeEventArgs e)
+    // --- Årsmaler ---
+    private IBrowserFile? _malFil;
+    private string? _malNavn;
+    private string? _malStr;
+    private ImportResultat? _malResultat;
+    private string? _malFeil;
+    private bool _malArbeider;
+    private bool _malBekreft;
+
+    private void VelgFristfil(InputFileChangeEventArgs e)
+        => VelgFil(e, out _fristFil, out _fristNavn, out _fristStr, out _fristFeil, ref _fristBekreft, ref _fristResultat);
+
+    private void VelgMalfil(InputFileChangeEventArgs e)
+        => VelgFil(e, out _malFil, out _malNavn, out _malStr, out _malFeil, ref _malBekreft, ref _malResultat);
+
+    private static void VelgFil(
+        InputFileChangeEventArgs e, out IBrowserFile? fil, out string? navn, out string? str,
+        out string? feil, ref bool bekreft, ref ImportResultat? resultat)
     {
-        _resultat = null;
-        _feil = null;
-        _bekreft = false;
-        _fil = e.File;
-        _valgtNavn = e.File.Name;
-        _valgtStr = $"{e.File.Size / 1024} kB";
+        resultat = null;
+        bekreft = false;
+        feil = null;
+        fil = e.File;
+        navn = e.File.Name;
+        str = $"{e.File.Size / 1024} kB";
 
         if (e.File.Size > MaksStorrelse)
         {
-            _feil = "Filen er for stor (maks 25 MB).";
-            _fil = null;
+            feil = "Filen er for stor (maks 25 MB).";
+            fil = null;
         }
         else if (!e.File.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
         {
-            _feil = "Kun JSON-filer støttes.";
-            _fil = null;
+            feil = "Kun JSON-filer støttes.";
+            fil = null;
         }
     }
 
-    private async Task Importer()
+    private async Task ImporterFrister()
     {
-        if (_fil is null)
-        {
-            return;
-        }
-
-        _arbeider = true;
-        _feil = null;
-        _resultat = null;
+        if (_fristFil is null) { return; }
+        _fristArbeider = true;
+        _fristFeil = null;
+        _fristResultat = null;
         try
         {
-            using var ms = new MemoryStream();
-            await _fil.OpenReadStream(MaksStorrelse).CopyToAsync(ms);
-            var database = JsonSerializer.Deserialize<FristDatabase>(ms.ToArray(), FristEndepunkter.DatabaseJson)
-                ?? throw new FormatException("Fila er tom eller ikke gyldig.");
-            _resultat = await Utveksling.ImporterAsync(database);
-            _bekreft = false;
+            var database = await Les<FristDatabase>(_fristFil);
+            _fristResultat = await Utveksling.ImporterAsync(database);
+            _fristBekreft = false;
         }
-        catch (JsonException ex)
+        catch (JsonException ex) { _fristFeil = $"Klarte ikke tolke JSON-fila: {ex.Message}"; }
+        catch (Exception ex) { _fristFeil = $"Import feilet: {ex.Message}"; }
+        finally { _fristArbeider = false; }
+    }
+
+    private async Task ImporterMaler()
+    {
+        if (_malFil is null) { return; }
+        _malArbeider = true;
+        _malFeil = null;
+        _malResultat = null;
+        try
         {
-            _feil = $"Klarte ikke tolke JSON-fila: {ex.Message}";
+            var database = await Les<MalDatabase>(_malFil);
+            _malResultat = await MalUtveksling.ImporterAsync(database);
+            _malBekreft = false;
         }
-        catch (Exception ex)
-        {
-            _feil = $"Import feilet: {ex.Message}";
-        }
-        finally
-        {
-            _arbeider = false;
-        }
+        catch (JsonException ex) { _malFeil = $"Klarte ikke tolke JSON-fila: {ex.Message}"; }
+        catch (Exception ex) { _malFeil = $"Import feilet: {ex.Message}"; }
+        finally { _malArbeider = false; }
+    }
+
+    private static async Task<T> Les<T>(IBrowserFile fil)
+    {
+        using var ms = new MemoryStream();
+        await fil.OpenReadStream(MaksStorrelse).CopyToAsync(ms);
+        return JsonSerializer.Deserialize<T>(ms.ToArray(), FristEndepunkter.DatabaseJson)
+               ?? throw new FormatException("Fila er tom eller ikke gyldig.");
     }
 }

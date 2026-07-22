@@ -55,10 +55,40 @@ else
             </label>
         </div>
 
-        <label>Regelparametre (JSON)
-            <textarea @bind="_inndata.Regelparametre" rows="3"></textarea>
-        </label>
-        <p class="melding"><small>@Hjelpetekst(_inndata.Regeltype)</small></p>
+        @if (_inndata.Regeltype == Regeltype.RelativTilMilepael)
+        {
+            @* Enklere kobling til en eksisterende regel: velg milepæl fra nedtrekksliste framfor
+               å skrive løp-navnet manuelt i JSON. JSON bygges automatisk ved lagring. *@
+            @if (Ankerkandidater().Count == 0)
+            {
+                <div class="feil">Det finnes ingen andre malregler å bruke som milepæl ennå. Opprett minst én annen regel først.</div>
+            }
+            else
+            {
+                <div class="skjemarad">
+                    <label>Milepæl (eksisterende regel)
+                        <select @bind="_ankerLoep">
+                            <option value="">— velg milepæl —</option>
+                            @foreach (var r in Ankerkandidater())
+                            {
+                                <option value="@r.Loep">@(string.IsNullOrWhiteSpace(r.Tittel) ? r.Loep : r.Tittel) (løp: @r.Loep)</option>
+                            }
+                        </select>
+                    </label>
+                    <label>Antall dager (negativ = før, positiv = etter)
+                        <input type="number" @bind="_offsetDager" />
+                    </label>
+                </div>
+                <p class="melding"><small>Fristen beregnes @OffsetTekst() den valgte milepælen, og flytter seg automatisk når milepælen flyttes.</small></p>
+            }
+        }
+        else
+        {
+            <label>Regelparametre (JSON)
+                <textarea @bind="_inndata.Regelparametre" rows="3"></textarea>
+            </label>
+            <p class="melding"><small>@Hjelpetekst(_inndata.Regeltype)</small></p>
+        }
 
         <div class="skjemarad">
             <button type="submit" class="knapp knapp-primær">Lagre</button>
@@ -74,21 +104,63 @@ else
     private string? _feil;
     private bool _lastet;
 
+    private IReadOnlyList<MalRegelDto> _alleRegler = [];
+    private string _ankerLoep = "";
+    private int _offsetDager = -7;
+
     private string Tittel => Id is null ? "Ny malregel" : "Rediger malregel";
 
     protected override async Task OnInitializedAsync()
     {
+        _alleRegler = await Mal.HentAlleAsync();
         _inndata = Id is null ? new MalRegelInndata() : await Mal.HentForRedigeringAsync(Id.Value);
+
+        // Forhåndsutfyll milepæl-feltene fra eksisterende JSON når vi redigerer en relativ-regel.
+        if (_inndata is { Regeltype: Regeltype.RelativTilMilepael })
+        {
+            try
+            {
+                var p = Regelparser.RelativTilMilepael(_inndata.Regelparametre);
+                _ankerLoep = p.AnkerLoep;
+                _offsetDager = p.OffsetDager;
+            }
+            catch (FormatException) { /* ugyldig/tom JSON — la feltene stå på standard */ }
+        }
+
         _lastet = true;
     }
 
+    /// <summary>Eksisterende regler som kan brukes som milepæl (anker), dedup per løp og uten
+    /// regelen selv (unngår at en regel peker på seg selv).</summary>
+    private IReadOnlyList<MalRegelDto> Ankerkandidater()
+        => _alleRegler
+            .Where(r => Id is null || r.Id != Id.Value)
+            .GroupBy(r => r.Loep, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .OrderBy(r => r.Tittel)
+            .ToList();
+
+    private string OffsetTekst() => _offsetDager switch
+    {
+        0 => "på samme dag som",
+        < 0 => $"{-_offsetDager} dager før",
+        _ => $"{_offsetDager} dager etter"
+    };
+
     private void SettMalParametre()
     {
-        // Bytt til et fornuftig parameter-utgangspunkt når regeltypen endres.
-        _inndata!.Regelparametre = _inndata.Regeltype switch
+        // Bytt til et fornuftig parameter-utgangspunkt når regeltypen endres. For relativ-til-milepæl
+        // fylles JSON fra nedtrekksvalget ved lagring, så her nullstilles bare de strukturerte feltene.
+        if (_inndata!.Regeltype == Regeltype.RelativTilMilepael)
+        {
+            _ankerLoep = "";
+            _offsetDager = -7;
+            return;
+        }
+
+        _inndata.Regelparametre = _inndata.Regeltype switch
         {
             Regeltype.RelativUkedag => "{\"maaned\":3,\"uke\":2,\"ukedag\":\"man\",\"aar_forskyvning\":0}",
-            Regeltype.RelativTilMilepael => "{\"anker_loep\":\"fremleggelse\",\"offset_dager\":-7}",
             _ => "{\"maaned\":1,\"dag\":1,\"aar_forskyvning\":0}"
         };
     }
@@ -96,6 +168,19 @@ else
     private async Task Lagre()
     {
         _feil = null;
+
+        // For relativ-til-milepæl bygges JSON-parameteren fra nedtrekksvalget + offset.
+        if (_inndata!.Regeltype == Regeltype.RelativTilMilepael)
+        {
+            if (string.IsNullOrWhiteSpace(_ankerLoep))
+            {
+                _feil = "Velg en milepæl (eksisterende regel) fristen skal beregnes ut fra.";
+                return;
+            }
+            _inndata.Regelparametre = Regelparser.Serialiser(
+                new RelativTilMilepaelParametre(_ankerLoep, _offsetDager));
+        }
+
         try
         {
             if (Id is null)

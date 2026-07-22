@@ -35,7 +35,7 @@ Alle ansatte i departementene kan logge inn via Entra ID (departementenes SSO). 
 | Sende inn forslag | ja | ja | nei |
 | Godkjenne, endre, generere, slette | ja | nei | nei |
 | Laste opp dokumenter for uttrekk (4.5) | ja | nei | nei |
-| Eksportere/importere alle frister (database) | ja | nei | nei |
+| Eksportere/importere alle frister og årsmaler (database) | ja | nei | nei |
 | Utpeke andre administratorer | ja | nei | nei |
 
 Funksjonsrettighet er uavhengig av synlighetsgruppe (2.3). En bruker har én funksjonsrolle og én eller flere synlighetsgrupper.
