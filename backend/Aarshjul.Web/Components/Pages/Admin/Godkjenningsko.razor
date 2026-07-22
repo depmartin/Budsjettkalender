@@ -143,9 +143,15 @@ else
                     }
                     else if (t.Modus == Kortmodus.Avvis)
                     {
-                        <label>Begrunnelse (valgfri)
-                            <textarea @bind="t.Begrunnelse" rows="2"></textarea>
-                        </label>
+                        @* Begrunnelse gir bare mening for bidragsyter-forslag: den blir et varsel til
+                           innsenderen. Robot-/opplastede forslag har ingen innsender å varsle, så feltet
+                           vises ikke der (endring #3). *@
+                        @if (e.Opphav == Opphav.Bruker)
+                        {
+                            <label>Begrunnelse (valgfri)
+                                <textarea @bind="t.Begrunnelse" rows="2"></textarea>
+                            </label>
+                        }
                         <div class="kort-handlinger">
                             <button class="knapp knapp-primær" @onclick="() => Avvis(e, t)">Bekreft avvisning</button>
                             <button class="knapp" @onclick="() => t.Modus = Kortmodus.Ingen">Avbryt</button>

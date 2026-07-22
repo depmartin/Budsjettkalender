@@ -1,3 +1,5 @@
+using System.Text.Json;
+using Aarshjul.Application.Datautveksling;
 using Aarshjul.Application.Frister;
 using Aarshjul.Application.Grupper;
 using Aarshjul.Application.Synlighet;
@@ -34,6 +36,25 @@ public static class FristEndepunkter
         // Word-utskrift (kravdok. kap. 8): utvalget følger den valgte gruppens faktiske tilgang via
         // samme server-side synlighetsfilter («se som rolle»); «alt» gir administrators fulle innsyn.
         app.MapGet("/api/eksport/word", EksporterWord).RequireAuthorization(Autorisasjon.ErAdministrator);
+
+        // JSON-«database» over alle frister (endring #2): full nedlasting til senere import.
+        // Kun administrator; inneholder FIN-interne frister, så ingen synlighetsfiltrering her.
+        app.MapGet("/api/eksport/frister-json", EksporterJson).RequireAuthorization(Autorisasjon.ErAdministrator);
+    }
+
+    /// <summary>Delte JSON-innstillinger for frist-databasen (enum som navn, innrykk for lesbarhet).</summary>
+    public static readonly JsonSerializerOptions DatabaseJson = new(JsonSerializerDefaults.Web)
+    {
+        WriteIndented = true,
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+    };
+
+    private static async Task<IResult> EksporterJson(IFristDatautveksling data, CancellationToken ct)
+    {
+        var database = await data.EksporterAsync(ct);
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(database, DatabaseJson);
+        var filnavn = $"frister-database-{database.EksportertTid:yyyyMMdd-HHmmss}.json";
+        return Results.File(bytes, "application/json", filnavn);
     }
 
     private static async Task<IResult> EksporterWord(

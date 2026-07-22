@@ -10,6 +10,10 @@ public static class Autorisasjon
     public const string ErAdministrator = "ErAdministrator";
     public const string KanForeslaa = "KanForeslå";
 
+    /// <summary>Kun bidragsyter (ikke administrator, ikke leser). Forslag-/varsel-løpet er
+    /// bidragsyterens; administrator redigerer frister direkte og trenger det ikke (endring #1).</summary>
+    public const string ErBidragsyter = "ErBidragsyter";
+
     public static void LeggTilPolicyer(AuthorizationOptions o)
     {
         o.AddPolicy(ErAdministrator, p => p.RequireClaim(
@@ -20,5 +24,10 @@ public static class Autorisasjon
             Brukerclaims.Rolle,
             nameof(Funksjonsrolle.Administrator),
             nameof(Funksjonsrolle.Bidragsyter)));
+
+        // Forslag-/varsel-flatene: kun bidragsyter. Administrator gjør endringer direkte
+        // (publiseres med én gang) og har ikke forslag/varsler i grensesnittet.
+        o.AddPolicy(ErBidragsyter, p => p.RequireClaim(
+            Brukerclaims.Rolle, nameof(Funksjonsrolle.Bidragsyter)));
     }
 }

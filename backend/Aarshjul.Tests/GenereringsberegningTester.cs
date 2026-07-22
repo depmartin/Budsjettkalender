@@ -121,4 +121,37 @@ public class GenereringsberegningTester
         Assert.Equal(new DateOnly(2025, 9, 22), r.Dato);
         Assert.False(r.Tentativ);
     }
+
+    [Fact]
+    public void RelativUkedag_med_fra_dag_beregnes_og_lander_i_uken_20_til_26()
+    {
+        // «Mandagen i uken 20.–26. juli» = første mandag på/etter 20. juli. Skal alltid gi en
+        // konkret dato (regresjon: fra_dag-regler kom ikke med i genereringen tidligere).
+        var regel = Regel("fag-rammefordelingsforslag", Regeltype.RelativUkedag,
+            "{\"maaned\":7,\"ukedag\":\"man\",\"fra_dag\":20}");
+
+        var r = Assert.Single(Genereringsberegning.Beregn(2026, [regel]));
+
+        Assert.False(r.ErFeil);
+        Assert.NotNull(r.Dato);
+        Assert.Equal(DayOfWeek.Monday, r.Dato!.Value.DayOfWeek);
+        Assert.Equal(7, r.Dato.Value.Month);
+        Assert.InRange(r.Dato.Value.Day, 20, 26);
+    }
+
+    [Fact]
+    public void To_regler_med_samme_loep_beregnes_begge_uten_aa_slukes()
+    {
+        // Regresjon for #4: bruker la til en ny regel med et løp som allerede fantes i malen
+        // («rammefordeling»). Tidligere ble den andre regelen stille droppet (TryAdd per løp).
+        var seed = Regel("rammefordeling", Regeltype.FastDato, "{\"maaned\":3,\"dag\":20,\"aar_forskyvning\":-1}");
+        var ny = Regel("rammefordeling", Regeltype.RelativUkedag, "{\"maaned\":7,\"ukedag\":\"man\",\"fra_dag\":20}");
+        ny.Tittel = "FAGs frist for rammefordelingsforslag";
+
+        var resultat = Genereringsberegning.Beregn(2026, [seed, ny]);
+
+        Assert.Equal(2, resultat.Count);
+        Assert.Contains(resultat, r => r.Regel.Tittel == "FAGs frist for rammefordelingsforslag" && r.Dato is { Month: 7 });
+        Assert.Contains(resultat, r => r.Regel.Tittel == "rammefordeling" && r.Dato is { Month: 3 });
+    }
 }

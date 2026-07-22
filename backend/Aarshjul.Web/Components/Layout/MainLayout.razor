@@ -11,7 +11,8 @@
         <nav class="hovednav">
             <NavLink href="/kalender" Match="NavLinkMatch.All">Kalender</NavLink>
             <NavLink href="/aarshjul">Årshjul</NavLink>
-            <AuthorizeView Policy="@Autorisasjon.KanForeslaa">
+            @* Forslag/varsler er bidragsyterens; administrator redigerer direkte (endring #1). *@
+            <AuthorizeView Policy="@Autorisasjon.ErBidragsyter">
                 <NavLink href="/forslag/mine">Mine forslag</NavLink>
                 <VarselTeller />
             </AuthorizeView>
@@ -23,6 +24,7 @@
                 <NavLink href="/admin/mal">Årsmal</NavLink>
                 <NavLink href="/admin/innsyn">Innsyn</NavLink>
                 <NavLink href="/admin/eksport">Eksporter</NavLink>
+                <NavLink href="/admin/data">Data</NavLink>
             </AuthorizeView>
         </nav>
         <div class="bruker">

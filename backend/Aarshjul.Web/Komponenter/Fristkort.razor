@@ -28,7 +28,14 @@
         </div>
     }
 
-    <AuthorizeView Policy="@Autorisasjon.KanForeslaa">
+    @* Administrator redigerer direkte (publiseres med én gang); bidragsyter foreslår endring
+       som går til godkjenningskøen (endring #1). *@
+    <AuthorizeView Policy="@Autorisasjon.ErAdministrator">
+        <div class="fristkort-handlinger">
+            <a class="fristkort-foreslaa" href="@($"/admin/frist/{Frist.Id}")">Rediger</a>
+        </div>
+    </AuthorizeView>
+    <AuthorizeView Policy="@Autorisasjon.ErBidragsyter">
         <div class="fristkort-handlinger">
             <a class="fristkort-foreslaa" href="@($"/forslag/endre/{Frist.Id}")">Foreslå endring</a>
         </div>

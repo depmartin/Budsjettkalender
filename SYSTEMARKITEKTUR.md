@@ -161,3 +161,13 @@ Dokumentet bærer en synlig topptekst generert fra det faktiske utvalgskriteriet
 Følgende forhold fra kravdokumentets kapittel 12 er forutsetninger for arkitekturen og må avklares med IT før produksjonsdata legges inn: IT- og sikkerhetsgodkjenning av skyløsningen, tverrdepartemental Entra-tilgang (multi-tenant eller gjestebruker, som avgjør om `FAG`-brukere kan autentiseres), konkret mapping fra Entra-attributter til synlighetsgrupper, og bekreftelse på at lagring og filtrering på Azure tilfredsstiller departementets krav til FIN-interne frister. Tverrdepartemental tilgang og endelig attributtmapping kan utvikles mot FINs egen tenant i mellomtiden.
 
 Nødgjenoppretting av administrator (se @BRUKERHISTORIER.md 4.11) skjer via driftsmiljøet — samme mekanisme som seeder den første administratoren — og forutsetter Azure-tilgang. Den er bevisst ikke en funksjon i grensesnittet.
+
+## 11. Eksport og import av frister (database)
+
+Administrator kan laste ned alle frister som én JSON-fil og laste den opp igjen (BRUKERHISTORIER 4.14). Formålet er en flyttbar sikkerhetskopi/gjenoppretting av hele fristoversikten.
+
+Mekanismen ligger bak et eget, byttbart ledd `IFristDatautveksling` (Application), implementert i Infrastructure. `EksporterAsync` leser alle frister med synlighet og gir en `FristDatabase` (versjonsnummer, eksporttidspunkt og en liste `FristEksport` med alle fristfeltene + synlighetskodene). `ImporterAsync` bruker **erstatt-alt**: eksisterende frister fjernes, og fila blir fasiten. Synlighetskoder som ikke finnes som grupper i mottakende løsning, hoppes over med en advarsel, slik at importen aldri bryter fremmednøkkelen mot `Synlighetsgruppe`. Sorteringsdagen er avledet og beregnes på nytt ved import.
+
+Nedlasting skjer via et administrator-endepunkt (`/api/eksport/frister-json`), og flaten `/admin/data` tilbyr både nedlasting og opplasting; import krever en aktiv «erstatt alt»-bekreftelse i grensesnittet. Dette er en bevisst administratoroperasjon i backend som eksplisitt inkluderer FIN-interne frister — den går derfor ikke gjennom den synlighetsfiltrerte leseflaten. Versjonsfeltet gjør at formatet kan utvikles uten å knekke eldre filer.
+
+Rolleskille (endring #1, 2026-07-22): administrator går ikke via forslag-/køleddet. Endringer administrator gjør på en publisert frist skjer ved direkte redigering (publiseres med én gang via skrivetjenesten, 4), ikke som et forslag i egen kø. Forslags- og varselflatene er dermed bidragsyterens (policy `ErBidragsyter`), og begrunnelse ved avvisning (6, 3.7) tilbys kun for forslag fra bidragsytere, som er de eneste som har en innsender å varsle.
