@@ -180,6 +180,14 @@ Word-dokumentet bærer en synlig topptekst som angir hvilken gruppe og periode u
 
 Informasjon som må ivaretas: at utvalget for begge formater følger den valgte gruppens server-side synlighet, og at en frists eventuelle klokkeslett (2.4) styrer om kalenderhendelsen blir heldags eller tidfestet.
 
+### 4.6b Dele en kalender som holder seg oppdatert (abonnementslenke)
+
+Som administrator vil jeg kunne dele budsjettkalenderen slik at endringene mine forplanter seg automatisk til mottakerne (f.eks. via en SharePoint-kalender koblet til Outlook), slik at jeg slipper å eksportere og re-importere hver gang noe endres.
+
+En vanlig `.ics`-*import* (4.6) er et engangs-øyeblikksbilde og oppdaterer seg ikke. For en delt kalender som holder seg oppdatert lager jeg i stedet en **abonnementslenke** per gruppe på flaten «Del kalender» (`/admin/abonnement`): én lenke for `POL`, én for `FA`, én for `FAG`, osv., eller én for «alt». Jeg deler lenken (limes inn i Outlook under «Legg til kalender → Fra Internett», eller kobles til en SharePoint-kalender), og klienten henter da en fersk kalender jevnlig — endringer jeg gjør i løsningen dukker opp hos mottakerne av seg selv. Jeg kan **skru en lenke av** (tilbakekalle den) eller slette den når som helst; da slutter den å virke.
+
+Lenken viser kun den valgte gruppens frister — akkurat som `.ics`-eksporten følger den samme server-side synligheten — så en delt `POL`-lenke gir nøyaktig det settet politisk ledelse selv ville sett, uten FIN-interne frister. Fordi kalenderklienter ikke kan logge inn, er lenken en hemmelig URL som fungerer som selve nøkkelen; den må behandles som en hemmelighet, og skrus av hvis den kommer på avveie. Den manuelle nedlastingen (4.6) beholdes ved siden av.
+
 ### 4.7 Styre synlighet for politisk ledelse
 
 Som administrator vil jeg at synlighet for politisk ledelse alltid skal være et bevisst valg, slik at en frist aldri ved et uhell deles med politisk ledelse automatisk.
@@ -210,9 +218,11 @@ Gruppemedlemskap utledes som standard fra Entra-attributter via en konfigurerbar
 
 Som administrator vil jeg kunne gi andre FA-ansatte administratortilgang, slik at flere kan forvalte fristene og løsningen ikke står og faller med én person.
 
-Kun FA-ansatte kan velges som administrator. Den normale veien til administratorrollen går alltid gjennom en sittende administrator som utpeker en ny. Det finnes ingen selvbetjent mulighet for en FA-ansatt til å gi seg selv administratortilgang.
+**Automatisk administrator via Entra-gruppe (seksjon SBR) — endret 2026-07-30.** Administratortilgang gis nå primært **automatisk** til alle i en konfigurert Entra-gruppe (i praksis seksjon SBR i Finansavdelingen): er du i gruppen, blir du administrator ved innlogging. Dette forenkler nettopp problemet med å oppnevne en ny administrator når en gammel slutter — tilgangen følger organisasjonen i Entra framfor en manuell utpeking. Tilgangen er **medlemskapsstyrt**: forlater du gruppen, mister du administratorrollen ved neste innlogging. Hvilke(n) Entra-gruppe(r) som gir admin, settes i konfigurasjon sammen med IT (SBRs objekt-id).
 
-For det tilfellet at det ikke lenger finnes noen aktiv administrator — slik at køen er frosset og ingen kan utpeke en ny — finnes en nødvei utenfor løsningen: en gjenoppretting via driftsmiljøet (samme mekanisme som setter den første administratoren ved idriftsetting). Denne nødveien forutsetter tilgang til driftsmiljøet og er ikke en funksjon i grensesnittet.
+Ved siden av dette beholdes den **seedede første-administratoren** (satt ved idriftsetting) som en nødvei — en slik administrator er ikke gruppestyrt og nedgraderes aldri automatisk, slik at løsningen ikke står uten administrator dersom Entra-oppsettet svikter. Det finnes fortsatt ingen selvbetjent knapp der en bruker gir seg selv administratortilgang; tilgangen kommer enten fra Entra-gruppen eller fra seeding via driftsmiljøet.
+
+For det tilfellet at det ikke lenger finnes noen aktiv administrator finnes fortsatt nødveien utenfor løsningen: en gjenoppretting via driftsmiljøet (samme mekanisme som setter den første administratoren ved idriftsetting), som forutsetter tilgang til driftsmiljøet og ikke er en funksjon i grensesnittet.
 
 ### 4.12 Se at den automatiske innhentingen lever
 

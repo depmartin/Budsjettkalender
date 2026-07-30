@@ -20,7 +20,10 @@ public static class Demodata
         ("demo-fa", "Frida FA (bidragsyter, FA)", Funksjonsrolle.Bidragsyter, true, ["FA"]),
         ("demo-finfag", "Finn FIN-FAG (bidragsyter, FIN-FAG)", Funksjonsrolle.Bidragsyter, true, ["FIN-FAG"]),
         ("demo-fag", "Frank Fagdep (leser, FAG)", Funksjonsrolle.Leser, false, ["FAG"]),
-        ("demo-pol", "Pia Politiker (leser, POL)", Funksjonsrolle.Leser, false, ["POL"])
+        ("demo-pol", "Pia Politiker (leser, POL)", Funksjonsrolle.Leser, false, ["POL"]),
+        // Seedes som bidragsyter, men bærer SBR-gruppeclaimen ved innlogging og blir dermed
+        // administrator automatisk (Endring 2) — demonstrerer medlemskapsstyrt admin-tilgang.
+        ("demo-sbr", "Sivert SBR (seksjon SBR – blir admin automatisk)", Funksjonsrolle.Bidragsyter, true, ["FA"])
     ];
 
     public static async Task SeedAsync(AppDbContext db, CancellationToken ct = default)

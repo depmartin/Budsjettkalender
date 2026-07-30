@@ -1,0 +1,158 @@
+@page "/admin/abonnement"
+@using Aarshjul.Application.Kalender
+@using Aarshjul.Application.Grupper
+@using Microsoft.AspNetCore.Components.Authorization
+@attribute [Authorize(Policy = Autorisasjon.ErAdministrator)]
+@inject IKalenderabonnement Feedtjeneste
+@inject IGruppetjeneste Grupper
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthState
+
+<PageTitle>Del kalender (abonnement)</PageTitle>
+
+<h1>Del kalender (abonnement)</h1>
+
+<p class="ingress">
+    Lag en <strong>abonnementslenke</strong> per gruppe. Del lenken (f.eks. i en SharePoint-kalender),
+    så abonnerer Outlook på den og henter en fersk kalender jevnlig — endringer du gjør her dukker opp
+    hos mottakerne av seg selv, uten ny import. Lenken viser kun den valgte gruppens frister (samme
+    server-side synlighet som ellers). Du kan skru en lenke <strong>av</strong> når som helst.
+</p>
+
+<div class="feil" role="note">
+    <strong>Behandle lenken som en hemmelighet.</strong> Alle som har URL-en ser gruppens frister uten
+    innlogging. Skru lenken av hvis den kommer på avveie, og lag en ny.
+</div>
+
+<section class="skjema">
+    <h2>Ny lenke</h2>
+    @if (_feil is not null)
+    {
+        <div class="feil">@_feil</div>
+    }
+    <div class="skjemarad">
+        <label>Gruppe
+            <select @bind="_valgtKode">
+                <option value="">Alle (mitt fulle innsyn – FIN-internt)</option>
+                @foreach (var g in _grupper)
+                {
+                    <option value="@g.Kode">@g.Navn (@g.Kode)</option>
+                }
+            </select>
+        </label>
+        <button class="knapp knapp-primær" @onclick="Opprett" disabled="@_arbeider">
+            @(_arbeider ? "Oppretter …" : "Opprett lenke")
+        </button>
+    </div>
+</section>
+
+<section class="skjema">
+    <h2>Eksisterende lenker</h2>
+    @if (_abonnementer.Count == 0)
+    {
+        <p class="melding">Ingen lenker ennå.</p>
+    }
+    else
+    {
+        <table class="tabell">
+            <thead>
+                <tr><th>Gruppe</th><th>Status</th><th>Lenke (URL)</th><th>Handlinger</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var a in _abonnementer)
+                {
+                    <tr>
+                        <td>@a.Etikett @(a.ErAlt ? "(alt)" : $"({a.GruppeKode})")</td>
+                        <td>
+                            @if (a.Aktiv)
+                            {
+                                <span class="merke merke-aar">Aktiv</span>
+                            }
+                            else
+                            {
+                                <span class="merke merke-tentativ">Avskrudd</span>
+                            }
+                        </td>
+                        <td>
+                            @if (a.Aktiv)
+                            {
+                                <code class="feed-url">@FeedUrl(a.Token)</code>
+                            }
+                            else
+                            {
+                                <span class="melding">— (skru på for å bruke)</span>
+                            }
+                        </td>
+                        <td class="skjemarad">
+                            @if (a.Aktiv)
+                            {
+                                <button class="knapp" @onclick="() => SettAktiv(a.Id, false)">Skru av</button>
+                            }
+                            else
+                            {
+                                <button class="knapp" @onclick="() => SettAktiv(a.Id, true)">Skru på</button>
+                            }
+                            <button class="knapp" @onclick="() => Slett(a.Id)">Slett</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <p class="melding">
+            I Outlook: <em>Legg til kalender → Fra Internett</em> og lim inn URL-en. I SharePoint kan du
+            koble den samme URL-en til en kalender som deles videre.
+        </p>
+    }
+</section>
+
+@code {
+    private IReadOnlyList<GruppeDto> _grupper = [];
+    private IReadOnlyList<KalenderabonnementDto> _abonnementer = [];
+    private string _valgtKode = "";
+    private bool _arbeider;
+    private string? _feil;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _grupper = await Grupper.HentAktiveAsync();
+        await LastAbonnementer();
+    }
+
+    private async Task LastAbonnementer()
+        => _abonnementer = await Feedtjeneste.HentAlleAsync();
+
+    private string FeedUrl(string token) => $"{Nav.BaseUri}kalender/feed/{token}.ics";
+
+    private async Task Opprett()
+    {
+        _feil = null;
+        _arbeider = true;
+        try
+        {
+            var state = await AuthState.GetAuthenticationStateAsync();
+            var navn = state.User.Identity?.Name ?? "administrator";
+            await Feedtjeneste.OpprettAsync(string.IsNullOrEmpty(_valgtKode) ? null : _valgtKode, navn);
+            await LastAbonnementer();
+        }
+        catch (Exception ex)
+        {
+            _feil = ex.Message;
+        }
+        finally
+        {
+            _arbeider = false;
+        }
+    }
+
+    private async Task SettAktiv(Guid id, bool aktiv)
+    {
+        await Feedtjeneste.SettAktivAsync(id, aktiv);
+        await LastAbonnementer();
+    }
+
+    private async Task Slett(Guid id)
+    {
+        await Feedtjeneste.SlettAsync(id);
+        await LastAbonnementer();
+    }
+}

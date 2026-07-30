@@ -11,12 +11,16 @@ namespace Aarshjul.Infrastructure.Brukere;
 /// gruppemedlemskap, uten å røre manuelt satte medlemskap (beslutning 2026-06-18).
 /// Setter aldri administratorrolle automatisk og mapper aldri POL automatisk.
 /// </summary>
-public class BrukeroppslagTjeneste(AppDbContext db, IOptions<EntraGruppeOpsjoner> opsjoner) : IBrukeroppslag
+public class BrukeroppslagTjeneste(
+    AppDbContext db,
+    IOptions<EntraGruppeOpsjoner> opsjoner,
+    IOptions<AdministratortilgangOpsjoner> adminOpsjoner) : IBrukeroppslag
 {
     private const string PolKode = "POL";
     private static readonly string[] FinGrupper = ["FA", "FIN-FAG"];
 
     private readonly EntraGruppeOpsjoner _opsjoner = opsjoner.Value;
+    private readonly AdministratortilgangOpsjoner _adminOpsjoner = adminOpsjoner.Value;
 
     public async Task<GjeldendeBruker> HentEllerOpprettAsync(ClaimsPrincipal principal, CancellationToken ct = default)
     {
@@ -24,7 +28,9 @@ public class BrukeroppslagTjeneste(AppDbContext db, IOptions<EntraGruppeOpsjoner
         var navn = HentNavn(principal) ?? id;
 
         var entraKoder = await UtledEntraGrupperAsync(principal, ct);
-        var erFin = entraKoder.Any(k => FinGrupper.Contains(k));
+        var erAdminGruppe = ErIAdminGruppe(principal);
+        // SBR er i Finansavdelingen; admin-gruppemedlemskap innebærer FIN-tilhørighet.
+        var erFin = erAdminGruppe || entraKoder.Any(k => FinGrupper.Contains(k));
 
         var bruker = await db.Brukere
             .Include(u => u.Grupper)
@@ -37,7 +43,7 @@ public class BrukeroppslagTjeneste(AppDbContext db, IOptions<EntraGruppeOpsjoner
                 Id = id,
                 Navn = navn,
                 ErFin = erFin,
-                // Bidragsyter er standard for FIN-ansatte, leser for øvrige. Aldri admin automatisk.
+                // Standard: bidragsyter for FIN, leser for øvrige. Admin gis kun av admin-gruppen.
                 Funksjonsrolle = erFin ? Funksjonsrolle.Bidragsyter : Funksjonsrolle.Leser
             };
             db.Brukere.Add(bruker);
@@ -45,11 +51,26 @@ public class BrukeroppslagTjeneste(AppDbContext db, IOptions<EntraGruppeOpsjoner
         else
         {
             bruker.Navn = navn;
-            // Hev til FIN hvis Entra nå tilsier det; ikke nedgrader en eksisterende administrator.
+            // Hev til FIN hvis Entra nå tilsier det; nedgrader aldri en eksisterende administrator her.
             if (erFin)
             {
                 bruker.ErFin = true;
             }
+        }
+
+        // Medlemskapsstyrt administratortilgang (beslutning 2026-07-30): tilhører brukeren en
+        // konfigurert admin-gruppe (SBR) blir vedkommende administrator. Forlater brukeren
+        // gruppen, mister en *automatisk* tildelt administrator rollen igjen — men en seedet/
+        // manuelt satt administrator (AdminViaEntra == false) røres aldri.
+        if (erAdminGruppe)
+        {
+            bruker.Funksjonsrolle = Funksjonsrolle.Administrator;
+            bruker.AdminViaEntra = true;
+        }
+        else if (bruker.AdminViaEntra)
+        {
+            bruker.Funksjonsrolle = bruker.ErFin ? Funksjonsrolle.Bidragsyter : Funksjonsrolle.Leser;
+            bruker.AdminViaEntra = false;
         }
 
         SynkroniserEntraGrupper(bruker, entraKoder);
@@ -57,6 +78,18 @@ public class BrukeroppslagTjeneste(AppDbContext db, IOptions<EntraGruppeOpsjoner
 
         var alleKoder = bruker.Grupper.Select(g => g.GruppeKode).Distinct().ToList();
         return new GjeldendeBruker(bruker.Id, bruker.Navn, bruker.Funksjonsrolle, alleKoder);
+    }
+
+    /// <summary>Sant når principalen bærer en claim som matcher en konfigurert admin-gruppe (SBR).</summary>
+    private bool ErIAdminGruppe(ClaimsPrincipal principal)
+    {
+        if (_adminOpsjoner.Gruppeider.Count == 0)
+        {
+            return false;
+        }
+
+        var admingrupper = new HashSet<string>(_adminOpsjoner.Gruppeider, StringComparer.OrdinalIgnoreCase);
+        return principal.FindAll(_adminOpsjoner.KildeClaimType).Any(c => admingrupper.Contains(c.Value));
     }
 
     /// <summary>Bytter ut Entra-utledede medlemskap, men beholder manuelt satte.</summary>

@@ -68,6 +68,7 @@ else if (!erTesting)
 
 // --- Konfigurasjon ---
 builder.Services.Configure<EntraGruppeOpsjoner>(builder.Configuration.GetSection(EntraGruppeOpsjoner.Seksjon));
+builder.Services.Configure<AdministratortilgangOpsjoner>(builder.Configuration.GetSection(AdministratortilgangOpsjoner.Seksjon));
 builder.Services.Configure<StartdataOpsjoner>(builder.Configuration.GetSection(StartdataOpsjoner.Seksjon));
 builder.Services.Configure<SynlighetsregelOpsjoner>(builder.Configuration.GetSection(SynlighetsregelOpsjoner.Seksjon));
 
@@ -82,6 +83,7 @@ builder.Services.AddScoped<IVarseltjeneste, Varseltjeneste>();
 builder.Services.AddScoped<IGruppetjeneste, Gruppetjeneste>();
 builder.Services.AddScoped<IWordEksport, WordEksportTjeneste>();
 builder.Services.AddScoped<IKalenderEksport, IcsEksportTjeneste>();
+builder.Services.AddScoped<IKalenderabonnement, KalenderabonnementTjeneste>();
 builder.Services.AddSingleton<ISynlighetsregel, Synlighetsregel>();
 builder.Services.AddScoped<IGenereringstjeneste, GenereringsTjeneste>();
 builder.Services.AddScoped<IMaltjeneste, Maltjeneste>();
