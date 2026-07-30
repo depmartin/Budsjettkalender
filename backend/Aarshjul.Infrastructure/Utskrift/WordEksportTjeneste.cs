@@ -88,7 +88,8 @@ public sealed class WordEksportTjeneste : IWordEksport
             return $"{kvalifikator}{maaned} (tentativ)";
         }
 
-        return frist.Dato.ToString("dd.MM.yyyy", Nb);
+        var dato = frist.Dato.ToString("dd.MM.yyyy", Nb);
+        return frist.Klokkeslett is { } kl ? $"{dato} kl. {kl:HH\\:mm}" : dato;
     }
 
     private static string KategoriNavn(Kategori kategori) => kategori switch

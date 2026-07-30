@@ -79,6 +79,7 @@ public class FristskrivingTjeneste(AppDbContext db) : IFristskriving
             Dato = frist.Dato,
             Datopresisjon = frist.Datopresisjon,
             Datokvalifikator = frist.Datokvalifikator,
+            Klokkeslett = frist.Klokkeslett,
             Budsjettaar = frist.Budsjettaar,
             Kategori = frist.Kategori,
             Loep = frist.Loep,
@@ -94,6 +95,8 @@ public class FristskrivingTjeneste(AppDbContext db) : IFristskriving
         frist.Datopresisjon = inndata.Datopresisjon;
         // Kvalifikator er kun meningsfull ved månedspresisjon.
         frist.Datokvalifikator = inndata.Datopresisjon == Datopresisjon.Maaned ? inndata.Datokvalifikator : null;
+        // Klokkeslett er kun meningsfullt ved dagspresisjon; en tentativ måneds-frist er alltid heldags.
+        frist.Klokkeslett = inndata.Datopresisjon == Datopresisjon.Dag ? inndata.Klokkeslett : null;
         frist.Budsjettaar = inndata.Budsjettaar;
         frist.Kategori = inndata.Kategori;
         frist.Loep = string.IsNullOrWhiteSpace(inndata.Loep) ? null : inndata.Loep.Trim();

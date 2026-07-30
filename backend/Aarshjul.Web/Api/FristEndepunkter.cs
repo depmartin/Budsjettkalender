@@ -2,6 +2,7 @@ using System.Text.Json;
 using Aarshjul.Application.Datautveksling;
 using Aarshjul.Application.Frister;
 using Aarshjul.Application.Grupper;
+using Aarshjul.Application.Kalender;
 using Aarshjul.Application.Synlighet;
 using Aarshjul.Application.Utskrift;
 using Aarshjul.Domain;
@@ -37,6 +38,9 @@ public static class FristEndepunkter
         // samme server-side synlighetsfilter («se som rolle»); «alt» gir administrators fulle innsyn.
         app.MapGet("/api/eksport/word", EksporterWord).RequireAuthorization(Autorisasjon.ErAdministrator);
 
+        // Kalender-eksport (.ics): samme utvalg som Word, men som iCalendar-fil til import i Outlook.
+        app.MapGet("/api/eksport/ics", EksporterIcs).RequireAuthorization(Autorisasjon.ErAdministrator);
+
         // JSON-«database» over alle frister (endring #2): full nedlasting til senere import.
         // Kun administrator; inneholder FIN-interne frister, så ingen synlighetsfiltrering her.
         app.MapGet("/api/eksport/frister-json", EksporterJson).RequireAuthorization(Autorisasjon.ErAdministrator);
@@ -71,6 +75,36 @@ public static class FristEndepunkter
     private static async Task<IResult> EksporterWord(
         HttpContext http, IFristlesing lesing, IWordEksport eksport, IGruppetjeneste grupper, CancellationToken ct)
     {
+        var (utvalg, feil) = await ByggUtvalgAsync(http, lesing, grupper, ct);
+        if (utvalg is null) return feil!;
+
+        var bytes = eksport.GenererFristdokument(utvalg.Foresporsel, utvalg.Frister);
+        var filnavn = $"frister-{utvalg.Filnavnsdel}.docx";
+        return Results.File(bytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", filnavn);
+    }
+
+    private static async Task<IResult> EksporterIcs(
+        HttpContext http, IFristlesing lesing, IKalenderEksport eksport, IGruppetjeneste grupper, CancellationToken ct)
+    {
+        var (utvalg, feil) = await ByggUtvalgAsync(http, lesing, grupper, ct);
+        if (utvalg is null) return feil!;
+
+        var bytes = eksport.GenererIcs(utvalg.Foresporsel, utvalg.Frister);
+        var filnavn = $"frister-{utvalg.Filnavnsdel}.ics";
+        return Results.File(bytes, "text/calendar; charset=utf-8", filnavn);
+    }
+
+    /// <summary>Ferdig utvalg (kriterium + synlighetsfiltrerte frister) klart for en av eksportformene.</summary>
+    private sealed record Utvalg(Utskriftsforesporsel Foresporsel, IReadOnlyList<FristDto> Frister, string Filnavnsdel);
+
+    /// <summary>
+    /// Delt utvalgsbygging for Word- og kalendereksporten: leser gruppe/«alt» + periode fra spørringen,
+    /// bygger synlighetskonteksten («se som rolle» / fullt innsyn), og henter fristene gjennom det samme
+    /// server-side synlighetsfilteret. Slik gir begge formater nøyaktig samme sett.
+    /// </summary>
+    private static async Task<(Utvalg? utvalg, IResult? feil)> ByggUtvalgAsync(
+        HttpContext http, IFristlesing lesing, IGruppetjeneste grupper, CancellationToken ct)
+    {
         var q = http.Request.Query;
         var alt = q["alt"] == "true";
         var gruppeKode = q["gruppe"].FirstOrDefault();
@@ -92,7 +126,7 @@ public static class FristEndepunkter
         }
         else
         {
-            return Results.BadRequest("Velg en synlighetsgruppe eller «alt».");
+            return (null, Results.BadRequest("Velg en synlighetsgruppe eller «alt»."));
         }
 
         // Periodevinduet styrer utvalget; historikk tas med så fortidige frister i vinduet ikke faller bort.
@@ -100,11 +134,8 @@ public static class FristEndepunkter
         var frister = await lesing.HentSynligeAsync(ctx, filter, ct);
 
         var foresporsel = new Utskriftsforesporsel(alt ? null : gruppeKode, etikett, fra, til, alt);
-        var bytes = eksport.GenererFristdokument(foresporsel, frister);
-
-        var filnavnsdel = alt ? "alle" : gruppeKode!;
-        var filnavn = $"frister-{filnavnsdel}-{fra:yyyyMMdd}_{til:yyyyMMdd}.docx";
-        return Results.File(bytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", filnavn);
+        var filnavnsdel = $"{(alt ? "alle" : gruppeKode!)}-{fra:yyyyMMdd}_{til:yyyyMMdd}";
+        return (new Utvalg(foresporsel, frister, filnavnsdel), null);
     }
 
     private static FristFilter LesFilter(IQueryCollection q)

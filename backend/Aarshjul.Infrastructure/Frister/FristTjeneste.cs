@@ -125,7 +125,8 @@ public class FristTjeneste(AppDbContext db, TimeProvider klokke) : IFristlesing
                 f.DokumentId,
                 f.Notat,
                 f.Status,
-                f.Synlighet.Select(s => s.GruppeKode).ToList()));
+                f.Synlighet.Select(s => s.GruppeKode).ToList(),
+                f.Klokkeslett));
 
     private DateOnly Idag() => Datohjelp.Idag(klokke);
 }

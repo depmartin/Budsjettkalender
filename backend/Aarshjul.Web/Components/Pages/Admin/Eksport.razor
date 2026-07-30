@@ -2,13 +2,15 @@
 @attribute [Authorize(Policy = Autorisasjon.ErAdministrator)]
 @inject IGruppetjeneste Grupper
 
-<PageTitle>Eksporter frister til Word</PageTitle>
+<PageTitle>Eksporter frister</PageTitle>
 
-<h1>Eksporter til Word</h1>
+<h1>Eksporter frister</h1>
 <p class="ingress">
     Velg en gruppe og en periode. Utvalget følger nøyaktig den gruppens tilgang (samme
     synlighetsfilter som ellers), slik at «for POL» gir det settet politisk ledelse selv ville sett.
-    «Alt» gir ditt fulle innsyn og merkes som FIN-internt.
+    «Alt» gir ditt fulle innsyn og merkes som FIN-internt. Last ned som <strong>Word</strong>
+    (notat/underlag) eller som <strong>kalenderfil (.ics)</strong> du kan importere i Outlook —
+    hele utvalget kommer i én fil, så du slipper å legge inn hver frist for seg.
 </p>
 
 <div class="skjema">
@@ -40,7 +42,10 @@
 
     @if (KanLasteNed)
     {
-        <a class="knapp knapp-primær" href="@Nedlastingsurl">Last ned .docx</a>
+        <div class="skjemarad">
+            <a class="knapp knapp-primær" href="@Nedlastingsurl("word")">Last ned Word (.docx)</a>
+            <a class="knapp" href="@Nedlastingsurl("ics")">Last ned kalender (.ics)</a>
+        </div>
     }
     else
     {
@@ -60,16 +65,13 @@
 
     private bool KanLasteNed => _alt || !string.IsNullOrEmpty(_valgtKode);
 
-    private string Nedlastingsurl
+    private string Nedlastingsurl(string format)
     {
-        get
-        {
-            var deler = new List<string>();
-            if (_alt) deler.Add("alt=true");
-            else if (!string.IsNullOrEmpty(_valgtKode)) deler.Add($"gruppe={Uri.EscapeDataString(_valgtKode)}");
-            if (_fra is { } f) deler.Add($"fra={f:yyyy-MM-dd}");
-            if (_til is { } t) deler.Add($"til={t:yyyy-MM-dd}");
-            return "/api/eksport/word?" + string.Join("&", deler);
-        }
+        var deler = new List<string>();
+        if (_alt) deler.Add("alt=true");
+        else if (!string.IsNullOrEmpty(_valgtKode)) deler.Add($"gruppe={Uri.EscapeDataString(_valgtKode)}");
+        if (_fra is { } f) deler.Add($"fra={f:yyyy-MM-dd}");
+        if (_til is { } t) deler.Add($"til={t:yyyy-MM-dd}");
+        return $"/api/eksport/{format}?" + string.Join("&", deler);
     }
 }
