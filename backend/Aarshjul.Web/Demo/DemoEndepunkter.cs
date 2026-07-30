@@ -35,6 +35,13 @@ public static class DemoEndepunkter
                 new Claim(ClaimTypes.Name, persona.Navn)
             ], "Demo");
 
+            // Simuler Entra-gruppeclaimen for seksjon SBR (Endring 2): demo-sbr bærer den og
+            // blir dermed administrator automatisk via brukeroppslaget, uten å være seedet som admin.
+            if (persona.Id == "demo-sbr")
+            {
+                identitet.AddClaim(new Claim("groups", "SBR-DEMO"));
+            }
+
             await ctx.SignInAsync("Demo", new ClaimsPrincipal(identitet));
             return Results.Redirect("/");
         });

@@ -41,7 +41,7 @@ Alle ansatte i departementene kan logge inn via Entra ID (departementenes SSO). 
 Funksjonsrettighet er uavhengig av synlighetsgruppe (2.3). En bruker har én funksjonsrolle og én eller flere synlighetsgrupper.
 
 Regler for funksjonsrolle:
-- **Administrator** kan kun være en FIN-ansatt. Administrator utpekes av en annen administrator inne i appen (ikke via Entra-grupper). Den første administratoren settes opp ved idriftsetting (seed).
+- **Administrator** kan kun være en FIN-ansatt. Den første administratoren settes opp ved idriftsetting (seed). **Endret 2026-07-30:** administratortilgang gis nå primært **automatisk** til alle i en konfigurert Entra-gruppe (seksjon SBR i Finansavdelingen) — medlemskapsstyrt, slik at rollen følger organisasjonen i Entra og forenkler overgangen når en administrator slutter. Den seedede første-administratoren beholdes som nødvei ved siden av. (Dette reverserer den opprinnelige regelen om at admin kun utpekes manuelt av en sittende administrator; se SYSTEMARKITEKTUR 3.5 og beslutningsloggen 2026-07-30.)
 - **Bidragsyter** (kan lese og foreslå) er standard for FIN-ansatte.
 - **Leser** (kun lese, ingen forslag) er standard for ansatte i øvrige departementer og for politisk ledelse.
 - En ansatt i øvrig departement kan **ikke** bli administrator og ikke sende forslag.

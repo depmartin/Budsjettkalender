@@ -21,6 +21,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Gjentaksregel> Gjentaksregler => Set<Gjentaksregel>();
     public DbSet<Varsel> Varsler => Set<Varsel>();
     public DbSet<InnhentingsStatus> InnhentingsStatuser => Set<InnhentingsStatus>();
+    public DbSet<Kalenderabonnement> Kalenderabonnementer => Set<Kalenderabonnement>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -43,6 +44,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.Kilde).HasMaxLength(128);
             e.HasIndex(x => x.Budsjettaar);
             e.HasIndex(x => x.Sorteringsdag);
+        });
+
+        // --- Kalenderabonnement: delbar feed-lenke per gruppe (Endring 1) ---
+        b.Entity<Kalenderabonnement>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Token).HasMaxLength(64);
+            e.Property(x => x.GruppeKode).HasMaxLength(64);
+            e.Property(x => x.Etikett).HasMaxLength(256);
+            e.Property(x => x.OpprettetAv).HasMaxLength(256);
+            e.HasIndex(x => x.Token).IsUnique();
         });
 
         // --- FristSynlighet: koblingstabell frist ↔ gruppekode (indeksert join) ---

@@ -41,6 +41,12 @@ public static class FristEndepunkter
         // Kalender-eksport (.ics): samme utvalg som Word, men som iCalendar-fil til import i Outlook.
         app.MapGet("/api/eksport/ics", EksporterIcs).RequireAuthorization(Autorisasjon.ErAdministrator);
 
+        // Abonnements-feed (.ics) for delbare, auto-oppdaterende kalendere (Endring 1). ANONYMT:
+        // det hemmelige tokenet i URL-en er autoriseringen (kalenderklienter kan ikke logge inn
+        // interaktivt). Serveren filtrerer alltid utvalget til lenkens gruppe med samme server-side
+        // synlighetsfilter, så en delt POL-lenke gir kun POL-settet. Ukjent/avskrudd token → 404.
+        app.MapGet("/kalender/feed/{token}.ics", FeedIcs).AllowAnonymous();
+
         // JSON-«database» over alle frister (endring #2): full nedlasting til senere import.
         // Kun administrator; inneholder FIN-interne frister, så ingen synlighetsfiltrering her.
         app.MapGet("/api/eksport/frister-json", EksporterJson).RequireAuthorization(Autorisasjon.ErAdministrator);
@@ -92,6 +98,29 @@ public static class FristEndepunkter
         var bytes = eksport.GenererIcs(utvalg.Foresporsel, utvalg.Frister);
         var filnavn = $"frister-{utvalg.Filnavnsdel}.ics";
         return Results.File(bytes, "text/calendar; charset=utf-8", filnavn);
+    }
+
+    private static async Task<IResult> FeedIcs(
+        string token, IKalenderabonnement abonnement, IFristlesing lesing, IKalenderEksport eksport, CancellationToken ct)
+    {
+        var utvalg = await abonnement.HentAktivtUtvalgAsync(token, ct);
+        if (utvalg is null)
+        {
+            return Results.NotFound();
+        }
+
+        ISynlighetskontekst ctx = utvalg.ErAlt
+            ? new Synlighetskontekst(serAlt: true, grupper: [])
+            : Synlighetskontekst.ForGruppe(utvalg.GruppeKode!);
+
+        // Abonnementet er framoverskuende (ingen historikk) og uten periodegrense — det speiler
+        // «kalenderen slik den er nå» for gruppen, og oppdaterer seg når fristene endres.
+        var frister = await lesing.HentSynligeAsync(ctx, new FristFilter { InkluderHistorikk = false }, ct);
+
+        var foresporsel = new Utskriftsforesporsel(
+            utvalg.ErAlt ? null : utvalg.GruppeKode, utvalg.Etikett, null, null, utvalg.ErAlt);
+        var bytes = eksport.GenererIcs(foresporsel, frister);
+        return Results.File(bytes, "text/calendar; charset=utf-8");
     }
 
     /// <summary>Ferdig utvalg (kriterium + synlighetsfiltrerte frister) klart for en av eksportformene.</summary>
