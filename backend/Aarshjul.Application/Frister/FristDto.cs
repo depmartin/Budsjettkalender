@@ -21,8 +21,12 @@ public record FristDto(
     Guid? DokumentId,
     string? Notat,
     FristStatus Status,
-    IReadOnlyList<string> Synlighet)
+    IReadOnlyList<string> Synlighet,
+    TimeOnly? Klokkeslett = null)
 {
     /// <summary>Sant når fristen ikke har en fastsatt dag (tentativ) og må merkes som det.</summary>
     public bool ErTentativ => Datopresisjon != Datopresisjon.Dag;
+
+    /// <summary>Sant når fristen har et konkret klokkeslett (ellers er den heldags).</summary>
+    public bool HarKlokkeslett => Klokkeslett is not null;
 }

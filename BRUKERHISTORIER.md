@@ -50,6 +50,8 @@ Som bruker vil jeg kunne se frister som ennå ikke har en fastsatt dag, slik at 
 
 Enkelte frister har bevisst en mindre presis angivelse enn en konkret dag — typisk valgårssensitive høstfrister der datoen avhenger av regjeringsdannelsen (se 4.5). En slik frist vises ærlig som tentativ, med en angivelse på månedsnivå (unntaksvis primo, medio eller ultimo), og den plasseres likevel kronologisk i alle visninger uten å gi inntrykk av at dagen er bestemt.
 
+I motsatt ende kan en frist også ha et **konkret klokkeslett** (valgfritt; standard er heldags). De aller fleste frister er heldags, men administrator kan sette et klokkeslett på en dagspresis frist der det er relevant — det vises da ved siden av datoen, og styrer om en kalendereksport (4.6) lager en heldags- eller en tidfestet hendelse.
+
 ### 2.5 Historikk
 
 Som bruker vil jeg kunne se tilbake på frister som har vært, slik at jeg kan studere et tidligere budsjettløp.
@@ -166,13 +168,17 @@ Valgårssensitive frister i et stortingsvalgår får en markering per frist (det
 
 Informasjon som må ivaretas: for hver generert frist koblingen til gjentaksregelen og til fjorårets tilsvarende frist (via løp og forrige budsjettår), den beregnede datoen, den videreførte synligheten, og eventuell tentativ presisjon.
 
-### 4.6 Skrive ut til Word
+### 4.6 Eksportere til Word og kalender (.ics)
 
-Som administrator vil jeg kunne skrive ut frister til et Word-dokument i FINs notatmal, slik at jeg har et delbart underlag til et møte eller til politisk ledelse.
+Som administrator vil jeg kunne eksportere frister til et Word-dokument i FINs notatmal, slik at jeg har et delbart underlag til et møte eller til politisk ledelse, **og** til en kalenderfil jeg kan importere i Outlook, slik at fristene vises i kalenderen min.
 
-Utskriften tar to valg: gruppe og periode. Utvalget er de fristene den valgte gruppen faktisk har tilgang til innenfor perioden, slik at «skriv ut for `POL`» gir nøyaktig det settet politisk ledelse selv ville sett, og «skriv ut for `FAG`» utelater FIN-interne frister. Administrator kan i tillegg velge å skrive ut alt — sitt eget fulle innsyn — når dokumentet er til intern bruk. Genereringen skjer i backend, der tilgang og data allerede er kjent.
+Begge eksportformene tar de samme to valgene: gruppe og periode. Utvalget er de fristene den valgte gruppen faktisk har tilgang til innenfor perioden, slik at «for `POL`» gir nøyaktig det settet politisk ledelse selv ville sett, og «for `FAG`» utelater FIN-interne frister. Administrator kan i tillegg velge alt — sitt eget fulle innsyn — når dokumentet er til intern bruk. Genereringen skjer i backend, der tilgang og data allerede er kjent, og begge formatene henter det samme settet gjennom det samme synlighetsfilteret.
 
-Dokumentet bærer en synlig topptekst som angir hvilken gruppe og periode utskriften gjelder, slik at en utskrift ikke kan forveksles med en annen gruppes utvalg. «Alt»-utskriften merkes tydeligst som FIN-internt, fordi den er mest sensitiv. Selve utskriftshandlingen logges ikke; det aktive administrator-innsynet (4.8) dekker kontrollbehovet.
+Word-dokumentet bærer en synlig topptekst som angir hvilken gruppe og periode utskriften gjelder, slik at en utskrift ikke kan forveksles med en annen gruppes utvalg. «Alt»-utskriften merkes tydeligst som FIN-internt, fordi den er mest sensitiv. Selve utskriftshandlingen logges ikke; det aktive administrator-innsynet (4.8) dekker kontrollbehovet.
+
+**Kalendereksporten** er en iCalendar-fil (`.ics`) der hele utvalget samles i én fil — jeg slipper å legge inn hver frist for seg. Jeg velger for eksempel «for `POL`» og perioden 1. juli til 1. oktober, laster ned fila, og importerer den i Outlook, hvor fristene da vises i kalendervisningen. Hver frist blir en heldagshendelse på fristdagen (uten påminnelse, og uten å blokkere «opptatt»-tid), med mindre fristen har et konkret klokkeslett — da blir den en tidfestet hendelse til riktig tid. Tentative frister tas med og merkes «(tentativ)».
+
+Informasjon som må ivaretas: at utvalget for begge formater følger den valgte gruppens server-side synlighet, og at en frists eventuelle klokkeslett (2.4) styrer om kalenderhendelsen blir heldags eller tidfestet.
 
 ### 4.7 Styre synlighet for politisk ledelse
 

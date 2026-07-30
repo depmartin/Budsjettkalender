@@ -19,6 +19,13 @@ public class Frist
     /// <summary>Kvalifikator ved månedspresisjon (primo/medio/ultimo), ellers null.</summary>
     public Datokvalifikator? Datokvalifikator { get; set; }
 
+    /// <summary>
+    /// Valgfritt klokkeslett på fristdagen. Null = heldags (standard, slik de fleste frister er).
+    /// Er kun meningsfull ved dagspresisjon; en tentativ (måneds-)frist har ikke klokkeslett.
+    /// Styrer om en kalendereksport lager en heldags- eller tidfestet hendelse.
+    /// </summary>
+    public TimeOnly? Klokkeslett { get; set; }
+
     /// <summary>Avledet entydig sorteringspunkt, beregnes ved lagring (se <see cref="Datoberegning"/>).</summary>
     public DateOnly Sorteringsdag { get; set; }
 

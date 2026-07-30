@@ -18,7 +18,8 @@ public static class Visningformat
         var maaned = Maaneder[f.Dato.Month - 1];
         if (f.Datopresisjon == Datopresisjon.Dag)
         {
-            return $"{f.Dato.Day}. {maaned} {f.Dato.Year}";
+            var klokke = f.Klokkeslett is { } kl ? $" kl. {kl:HH\\:mm}" : "";
+            return $"{f.Dato.Day}. {maaned} {f.Dato.Year}{klokke}";
         }
 
         var kvalifikator = f.Datokvalifikator switch

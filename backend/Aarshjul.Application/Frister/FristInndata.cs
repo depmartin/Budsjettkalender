@@ -12,6 +12,9 @@ public class FristInndata
     public DateOnly Dato { get; set; } = DateOnly.FromDateTime(DateTime.Today);
     public Datopresisjon Datopresisjon { get; set; } = Datopresisjon.Dag;
     public Datokvalifikator? Datokvalifikator { get; set; }
+
+    /// <summary>Valgfritt klokkeslett (kun ved dagspresisjon). Null = heldags.</summary>
+    public TimeOnly? Klokkeslett { get; set; }
     public int Budsjettaar { get; set; } = DateTime.Today.Year + 1;
     public Kategori Kategori { get; set; } = Kategori.Budsjett;
     public string? Loep { get; set; }

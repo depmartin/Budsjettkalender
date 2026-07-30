@@ -48,6 +48,8 @@ Den publiserte enheten brukeren ser. Feltene fra kravdokumentet videreføres: `i
 
 **Utvidelse — status.** `status` utvides med verdien `avvist` i tillegg til kravdokumentets `forslag`, `godkjent` og `fullfoert`. Et avvist forslag slettes ikke, men bevares med status `avvist`, slik at bidragsyteren kan se utfallet og eventuelt gjenbruke forslaget. `fullfoert` er i praksis lite brukt på brukerflaten, siden kalenderlogikken flytter frister til historikk av seg selv dato pluss én dag.
 
+**Utvidelse — valgfritt klokkeslett (2026-07-30).** Fristen får et valgfritt `klokkeslett` (`TimeOnly?`) ved siden av datoen. Null = heldags, som er standarden de aller fleste frister har. Feltet er kun meningsfullt ved dagspresisjon — en tentativ (måneds-)frist er alltid heldags — og håndheves slik i skriveporten. Klokkeslettet endrer ingen synlighets- eller sorteringslogikk (sorteringen bruker fortsatt `Sorteringsdag`), men styrer om kalendereksporten (9) lager en heldags- eller en tidfestet hendelse, og vises i leseflaten og Word-utskriften der det er satt. Krevde EF-migrasjonen `KalendereksportKlokkeslett` (én nullbar `time`-kolonne).
+
 Synlighet (`synlig_for`) håndheves alltid på server. En frist sendes aldri til en bruker uten en matchende gruppe.
 
 ### 3.2 Forslag
@@ -150,11 +152,13 @@ Valgårslogikken bygger på at den norske valgsyklusen er fast og kan beregnes: 
 
 ---
 
-## 9. Utskrift til Word
+## 9. Eksport til Word og kalender (.ics)
 
-Administrator kan eksportere frister til et Word-dokument i FINs notatmal (kravdokumentets kap. 8). Funksjonen tar to valg — gruppe og periode — og utvalget er fristene der `synlig_for` inneholder gruppens `kode` innenfor perioden. Dermed gir «skriv ut for `POL`» nøyaktig det settet politisk ledelse selv ville sett, og «skriv ut for `FAG`» utelater FIN-interne frister. Genereringen skjer i backend, der tilgang og data allerede er kjent, slik at utvalget er en gjenbruk av den samme server-side synlighetsfiltreringen som ellers (4).
+Administrator kan eksportere frister i to formater fra samme flate (`/admin/eksport`): et **Word-dokument** i FINs notatmal (kravdokumentets kap. 8) og en **iCalendar-fil (.ics)** til import i Outlook. Begge tar de samme to valgene — gruppe og periode — og utvalget er fristene der `synlig_for` inneholder gruppens `kode` innenfor perioden. Dermed gir «for `POL`» nøyaktig det settet politisk ledelse selv ville sett, og «for `FAG`» utelater FIN-interne frister. Genereringen skjer i backend, der tilgang og data allerede er kjent, slik at utvalget er en gjenbruk av den samme server-side synlighetsfiltreringen som ellers (4). Utvalgsbyggingen (gruppe/«alt» + periode + synlighetsfilter) er ett felles ledd som begge formatene kaller, så de gir garantert samme sett.
 
-Dokumentet bærer en synlig topptekst generert fra det faktiske utvalgskriteriet (gruppe og periode), slik at en utskrift ikke kan forveksles med en annen gruppes utvalg. Administrator kan i tillegg velge «alt» (eget fulle innsyn) for internt bruk; denne varianten merkes tydeligst som FIN-internt. Selve utskriftshandlingen logges ikke — i tråd med linjen om å unngå egen handlingslogging der aktivt administrator-innsyn (4) dekker kontrollbehovet.
+Word-dokumentet bærer en synlig topptekst generert fra det faktiske utvalgskriteriet (gruppe og periode), slik at en utskrift ikke kan forveksles med en annen gruppes utvalg. Administrator kan i tillegg velge «alt» (eget fulle innsyn) for internt bruk; denne varianten merkes tydeligst som FIN-internt. Selve utskriftshandlingen logges ikke — i tråd med linjen om å unngå egen handlingslogging der aktivt administrator-innsyn (4) dekker kontrollbehovet.
+
+**Kalendereksport (.ics, RFC 5545).** Ligger bak et eget, byttbart ledd `IKalenderEksport` (Application), implementert i Infrastructure (`IcsEksportTjeneste`, ren .NET). Én `VCALENDAR` samler **alle** fristene i utvalget som hver sin `VEVENT`, slik at administrator laster ned mange hendelser i én fil og importerer dem samlet — ikke én frist av gangen. Hver hendelse er som standard **heldags** på fristdagen (fristene har normalt ikke klokkeslett), `TRANSP:TRANSPARENT` (blokkerer ikke «opptatt»-tid) og uten påminnelse. Har en frist et konkret `klokkeslett` (3.1), lages i stedet en **tidfestet** hendelse; klokkeslettet tolkes som norsk tid og konverteres til UTC i fila, så Outlook viser riktig tidspunkt uansett lesertidssone. Tentative frister plasseres på `Sorteringsdag` og merkes «(tentativ)» i tittelen. Filen bygges med korrekt RFC 5545-formatering (CRLF, linjebretting på 75 oktetter, escaping av tekst), og hendelsene får en stabil `UID` avledet av fristens id.
 
 ## 10. Forhold som må avklares med IT før produksjon
 
