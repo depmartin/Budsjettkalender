@@ -51,6 +51,7 @@ public static class Startdata
     {
         await SeedStandardgrupperAsync(db, ct);
         await SeedStandardreglerAsync(db, ct);
+        await Internkalenderdata.SeedReglerAsync(db, ct);
         await SeedFoersteAdminAsync(db, opsjoner, ct);
         await db.SaveChangesAsync(ct);
     }

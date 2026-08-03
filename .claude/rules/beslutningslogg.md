@@ -32,6 +32,12 @@ Dette er prosjektets hukommelse mellom økter. Les hele ved start av hver økt.
 
 ## Beslutninger
 
+### [2026-08-03] Seedet start-sett av generelle regler fra SBRs tidslinjedokument
+- Beslutning: Brukeren leverte «Tidslinjer – budsjett» (PDF + Word) med de faktiske SBR-oppgavene per runde med tentative tidspunkt. Analysert og innarbeidet som **generelle regler** i internkalenderen: `Internkalenderdata.Regler` (~148 regelsett) seedes via `Startdata.SeedReglerAsync` (tomt-vernet på `GjoeremaalRegler`), så det gjelder både demo og produksjon og kan fritt endres/slettes av SBR etterpå. PDF-bildet var mest presist (hadde dagtall som Word-tabellen mistet), så seed bruker dagtall der de finnes; øvrige er tentativ måned (primo/medio/ultimo) eller rundeposisjon.
+- Detaljer: «Før hver runde»-oppgavene (6 stk) knyttet til alle fire hovedrunder (Rundeposisjon.Start). Marsrundens november/desember-oppgaver får `AarforskyvningJustering = -1` (to kalenderår før budsjettåret, siden marskonferansens januar–mars-arbeid alt ligger ett år før via rundens standardforskyvning). RNB samme kalenderår som budsjettåret; August ett år før; Nysaldering samme år. «IKKE SBRs ansvar»-oppgaven og rene vedleggs-/e-postfragmenter er utelatt. Trykkeri-fremdriftsplanen (Gul bok) på side 2 er ikke tatt med (leverandørplan, ikke SBR-mal).
+- Verifisert: 220 tester grønt (+4: seed gyldig/tomt-vernet, novemberoppgave lander to år før budsjettår ved generering, «før hver runde» genereres inn i alle hovedrunder). Demo: ~148 regler vises på `/internkalender/regler`, ingen feil.
+- Konsekvens: Ingen ny EF-migrasjon (gjenbruker `GjoeremaalRegel`-tabellene). Reglene er et **start-sett**, ikke låst — admin/SBR justerer dager/ansvarlige i UI og genererer konkrete runder fra dem. **Demo: slett `aarshjul-demo.db` ved pull for å få reglene seedet.**
+
 ### [2026-08-03] Internkalender for SBR (Fase 4, trinn 1–3)
 - Beslutning: La til en SBR-intern arbeidsliste («internkalender») som en egen fane, atskilt fra de publiserte fristene, etter et strukturert designintervju med brukeren. Gren `claude/sbr-internal-calendar-tasks-qbxexv`. Bygget i tre trinn (hvert verifisert grønt): kjerne → maler/generering → synkronisering. 216 tester grønt (+32). Kravdok. kap. 13, SYSTEMARKITEKTUR kap. 12, BRUKERHISTORIER kap. 8, `fase4-plan.md`.
 - Låste designvalg (fra intervjuet):
