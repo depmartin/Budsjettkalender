@@ -1,0 +1,90 @@
+@page "/internkalender/runde/{Id:guid}/synk"
+@using Aarshjul.Application.Internkalender
+@attribute [Authorize(Policy = Autorisasjon.ErSbr)]
+@inject IInternkalender Kalender
+@inject NavigationManager Nav
+
+<PageTitle>Synkroniser runde</PageTitle>
+
+<div class="admintopp">
+    <h1>Synkroniser@(_runde is null ? "" : $" – {_runde.Etikett}")</h1>
+    <button class="knapp" @onclick="TilRunde">Tilbake</button>
+</div>
+
+<p class="melding">
+    Endringer i de generelle reglene siden runden ble opprettet/sist synkronisert. Hvert forslag
+    godtas for seg. Avhukede og manuelt endrede gjøremål røres aldri.
+</p>
+
+@if (!_lastet)
+{
+    <p class="melding">Laster …</p>
+}
+else if (_forslag.Count == 0)
+{
+    <p class="melding">Ingen endringer å synkronisere – runden er à jour med reglene.</p>
+}
+else
+{
+    <table class="tabell">
+        <thead>
+            <tr><th></th><th>Handling</th><th>Gjøremål</th><th>Grunn</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var f in _forslag)
+            {
+                <tr>
+                    <td><input type="checkbox" @bind="_valgt[f]" /></td>
+                    <td>@HandlingNavn(f.Handling)</td>
+                    <td>@f.Tittel</td>
+                    <td>@f.Detalj</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="skjemarad">
+        <button class="knapp knapp-primær" @onclick="Utfør" disabled="@(!_valgt.Values.Any(v => v))">Utfør valgte</button>
+        <button class="knapp" @onclick="TilRunde">Avbryt</button>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private RundeDto? _runde;
+    private IReadOnlyList<SynkForslagDto> _forslag = [];
+    private readonly Dictionary<SynkForslagDto, bool> _valgt = [];
+    private bool _lastet;
+
+    protected override async Task OnInitializedAsync() => await Last();
+
+    private async Task Last()
+    {
+        _runde = await Kalender.HentRundeAsync(Id);
+        _forslag = await Kalender.ForberedSynkAsync(Id);
+        _valgt.Clear();
+        foreach (var f in _forslag)
+        {
+            _valgt[f] = true;
+        }
+        _lastet = true;
+    }
+
+    private static string HandlingNavn(SynkHandling h) => h switch
+    {
+        SynkHandling.LeggTil => "Legg til",
+        SynkHandling.Oppdater => "Oppdater",
+        SynkHandling.Fjern => "Fjern",
+        _ => h.ToString()
+    };
+
+    private async Task Utfør()
+    {
+        var godkjente = _valgt.Where(kv => kv.Value).Select(kv => kv.Key).ToList();
+        await Kalender.SynkroniserAsync(Id, godkjente);
+        TilRunde();
+    }
+
+    private void TilRunde() => Nav.NavigateTo($"/internkalender/runde/{Id}");
+}

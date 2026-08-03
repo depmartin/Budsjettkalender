@@ -14,6 +14,11 @@ public static class Autorisasjon
     /// bidragsyterens; administrator redigerer frister direkte og trenger det ikke (endring #1).</summary>
     public const string ErBidragsyter = "ErBidragsyter";
 
+    /// <summary>Tilgang til den SBR-interne internkalenderen. I v1 er SBR = administrator (admin gis
+    /// automatisk via Entra-gruppen SBR). Egen policy slik at SBR senere kan skilles fra admin uten
+    /// å endre hver flate. All internkalender-data er SBR-intern og sendes aldri til en ikke-SBR-klient.</summary>
+    public const string ErSbr = "ErSbr";
+
     public static void LeggTilPolicyer(AuthorizationOptions o)
     {
         o.AddPolicy(ErAdministrator, p => p.RequireClaim(
@@ -29,5 +34,9 @@ public static class Autorisasjon
         // (publiseres med én gang) og har ikke forslag/varsler i grensesnittet.
         o.AddPolicy(ErBidragsyter, p => p.RequireClaim(
             Brukerclaims.Rolle, nameof(Funksjonsrolle.Bidragsyter)));
+
+        // Internkalenderen: SBR-intern. I v1 sammenfaller SBR med administrator.
+        o.AddPolicy(ErSbr, p => p.RequireClaim(
+            Brukerclaims.Rolle, nameof(Funksjonsrolle.Administrator)));
     }
 }

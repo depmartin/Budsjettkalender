@@ -289,3 +289,45 @@ Brukeren ser frister der `synlig_for` inneholder `POL`. `POL` settes alltid eksp
 ## 7. Overlappende synlighet (gjelder alle)
 
 Synlighet er et sett av grupper per frist, ikke et nivåtall. En frist kan derfor merkes for vilkårlige kombinasjoner — `FA` og `POL` uten `FAG`, eller `FA` og `FAG` uten `POL`. En bruker ser fristen dersom minst én av brukerens grupper er i fristens sett. Dette gir den fleksibiliteten at riktig undergruppe ser en frist uten at synligheten må følge en fast rangordning.
+
+---
+
+## 8. Internkalender for SBR (SBR-intern arbeidsliste)
+
+Internkalenderen er en egen «fane» forbeholdt SBR (i v1 = administrator). Den er atskilt fra de publiserte fristene: en intern arbeidsliste med gjøremål SBR må gjøre i løpet av året, organisert i budsjettrunder. Alle historier her forutsetter SBR-tilgang; internkalender-data sendes aldri til en ikke-SBR-bruker.
+
+### 8.1 Se og organisere arbeidet i runder
+
+Som SBR-ansatt vil jeg se internkalenderen organisert i budsjettrunder (Marsrunden, Augustrunden, RNB, Nysalderingen, Regnskap og «Øvrig»), slik at jeg finner gjøremålene som hører til den runden jeg jobber med.
+
+De fire faste rundene finnes per år (f.eks. «Augustrunden 2027»); «Regnskap» er per regnskapsår, og «Øvrig» er en stående liste uten år for oppgaver som ikke hører til en runde. Hver konkret runde har en aktiv-liste (gjenstående, sortert på når de skal gjøres) og en ferdig-liste.
+
+### 8.2 Legge inn og endre gjøremål (også mangelfulle)
+
+Som SBR-ansatt vil jeg raskt kunne legge inn et gjøremål med bare en tittel og fylle ut resten senere, slik at jeg ikke mister en oppgave fordi jeg ikke har alle detaljene ennå.
+
+Hurtiginnlegging krever bare en tittel. Et fullt skjema lar meg sette notat, tidfesting og ansvarlige. Tidfestingen kan være en konkret dato, en tentativ måned (primo/medio/ultimo), et tidspunkt relativt til en milepæl (et anker-løp, f.eks. «en uke etter FAGs frist for innlevering»), eller en posisjon i runden (tidlig/midt/sent). Mangler anker-fristen for rundens år, vises gjøremålet som «venter på ankerdato» framfor en gjettet dato.
+
+Informasjon som må ivaretas: tittel (påkrevd), notat, tidfesting, og at et gjøremål kan stå ufullstendig.
+
+### 8.3 Sette ansvarlig(e)
+
+Som SBR-ansatt vil jeg kunne sette én eller flere ansvarlige på et gjøremål, slik at det er tydelig hvem som gjør hva. Ansvarlige velges fra listen over SBR-brukere (fra innlogging) eller legges inn som fritekst.
+
+### 8.4 Huke av og se hvem som gjorde det
+
+Som SBR-ansatt vil jeg kunne huke av et gjøremål som gjort, slik at det flyttes til «ferdig» og ikke lenger ligger i veien i den aktive listen. Systemet lagrer hvem som huket av og når, og alle i SBR ser dette. Huker jeg av en oppgave jeg ikke selv er ansvarlig for, må jeg bekrefte at jeg vil melde den fullført. En avsluttet oppgave kan åpnes igjen.
+
+### 8.5 Se mine oppgaver på tvers av runder
+
+Som SBR-ansatt vil jeg kunne se alle gjøremål jeg er ansvarlig for på tvers av runder, slik at jeg ser hva jeg skal gjøre uten å åpne hver runde for seg — for eksempel både Augustrunden 2027 og Nysalderingen 2026, som begge arbeides med høsten 2026. Inne i en runde kan jeg også filtrere på ansvarlig («kun mine»).
+
+### 8.6 Forvalte generelle regler og generere en runde
+
+Som SBR-ansatt vil jeg kunne beskrive gjentakende gjøremål som generelle regler og la løsningen generere en konkret oppgaveplan for en runde, slik at jeg ikke legger inn de samme oppgavene på nytt hver gang.
+
+En regel knyttes til én eller flere rundetyper (en snarvei velger «hver runde»). En regel som gjelder flere rundetyper genereres inn enkeltvis i hver valgt runde. Den genererte runden er et snapshot av reglene ved oppretting; jeg kan legge til engangsoppgaver som kun gjelder den runden.
+
+### 8.7 Synkronisere en runde mot regelendringer
+
+Som SBR-ansatt vil jeg kunne synkronisere en eksisterende runde mot endringer i de generelle reglene, slik at nye eller endrede regler kan fanges opp uten å bygge runden på nytt. Løsningen viser endringene (legg til / oppdater / fjern) som forslag jeg godtar enkeltvis. Synkroniseringen rører aldri et gjøremål jeg har huket av eller endret manuelt.

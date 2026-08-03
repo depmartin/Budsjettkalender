@@ -117,5 +117,15 @@ a { color: var(--primaer); }
 .synlighet legend { font-size: 0.85rem; color: var(--dempet); }
 .pol-valg { font-weight: 600; }
 
+/* Internkalender (SBR) */
+.internboks { background: #f6f8fa; border: 1px solid var(--kant); border-radius: 8px; padding: 0.8rem 1rem; margin: 1rem 0; }
+.internboks h2 { font-size: 1rem; margin: 0 0 0.5rem; }
+.bekreftboks { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: #fff; border: 1px solid var(--kant); box-shadow: 0 4px 16px rgba(0,0,0,0.15); border-radius: 10px; padding: 1rem 1.25rem; max-width: 32rem; z-index: 50; }
+.bekreftboks p { margin: 0 0 0.75rem; }
+.dempet { color: var(--dempet); font-size: 0.85rem; }
+tr.ferdig td { color: var(--dempet); }
+.ansvarligliste { list-style: none; margin: 0 0 0.5rem; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.ansvarligliste li { background: #eef0f3; border-radius: 999px; padding: 0.15rem 0.6rem; font-size: 0.85rem; }
+
 .knapp { padding: 0.45rem 1rem; border: 1px solid var(--kant); border-radius: 6px; background: #fff; cursor: pointer; font: inherit; }
 .knapp-primær { background: var(--primaer); color: #fff; border-color: var(--primaer); }

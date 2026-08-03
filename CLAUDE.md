@@ -22,6 +22,7 @@ Full kravspesifikasjon: @kravdokument-aarshjul-frister_v2.md
 - Roller og brukerflate: @BRUKERHISTORIER.md
 - Detaljert byggeplan for fase 2 (automatikk): @fase2-plan.md
 - Detaljert byggeplan for fase 3 (mal og generering): @fase3-plan.md
+- Detaljert byggeplan for fase 4 (internkalender for SBR): @fase4-plan.md
 
 ## Arbeidsmåte
 - Bygg i faser slik kravdokumentet beskriver. Fullfør og verifiser én fase før neste.

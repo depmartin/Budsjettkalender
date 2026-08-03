@@ -27,6 +27,10 @@
                 <NavLink href="/admin/abonnement">Del kalender</NavLink>
                 <NavLink href="/admin/data">Data</NavLink>
             </AuthorizeView>
+            @* Internkalender: SBR-intern arbeidsliste, kun for SBR (= administrator i v1). *@
+            <AuthorizeView Policy="@Autorisasjon.ErSbr">
+                <NavLink href="/internkalender">Internkalender</NavLink>
+            </AuthorizeView>
         </nav>
         <div class="bruker">
             <AuthorizeView>

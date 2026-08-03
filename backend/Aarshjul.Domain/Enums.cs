@@ -95,3 +95,92 @@ public enum GruppeMedlemskapKilde
     Entra,
     Manuell
 }
+
+// ---------------------------------------------------------------------------
+// Internkalender for SBR (SBR-intern arbeidsliste, atskilt fra publiserte frister).
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Budsjettrunde en intern oppgaveplan hører til. De fire faste rundene instansieres per
+/// budsjett-/regnskapsår; <see cref="Ovrig"/> er en stående bøtte uten år for oppgaver som
+/// ikke hører til en runde.
+/// </summary>
+public enum Rundetype
+{
+    /// <summary>Marsrunden: januar–april i år t-1 (for budsjettår t).</summary>
+    Marsrunden,
+
+    /// <summary>Augustrunden (inkl. gul bok/Prop. 1 S): juli–oktober i år t-1 (for budsjettår t).</summary>
+    Augustrunden,
+
+    /// <summary>Revidert nasjonalbudsjett: april–mai i år t.</summary>
+    Rnb,
+
+    /// <summary>Nysalderingen: oktober–desember i år t.</summary>
+    Nysaldering,
+
+    /// <summary>Regnskap: én runde per regnskapsår, arbeidet med gjennom hele året.</summary>
+    Regnskap,
+
+    /// <summary>Øvrig: stående bøtte uten år, kun manuelle oppgaver.</summary>
+    Ovrig
+}
+
+/// <summary>Status for et internt gjøremål. Fullførte flyttes til «ferdig»-visningen.</summary>
+public enum GjoeremaalStatus
+{
+    Aktiv,
+    Fullfoert
+}
+
+/// <summary>
+/// Hvordan et internt gjøremål (eller en regel) er tidfestet. Verdien styrer hvilke
+/// tidfestingsfelter som er meningsfulle.
+/// </summary>
+public enum Tidfestingstype
+{
+    /// <summary>Ingen dato satt ennå (mangelfullt gjøremål — sorteres sist).</summary>
+    Ingen,
+
+    /// <summary>Konkret dag. Regel: fast dag i måned (med årsforskyvning).</summary>
+    KonkretDato,
+
+    /// <summary>Tentativ måned (primo/medio/ultimo).</summary>
+    TentativMaaned,
+
+    /// <summary>Relativt til et anker-løp (offset i dager fra en publisert frist).</summary>
+    AnkerRelativ,
+
+    /// <summary>Posisjon innenfor rundens månedsspenn (tidlig/midt/sent).</summary>
+    Rundeposisjon
+}
+
+/// <summary>Grov posisjon innenfor en rundes månedsspenn (avledes til en sorteringsdag).</summary>
+public enum Rundeposisjon
+{
+    Start,
+    Tidlig,
+    Midt,
+    Sent,
+    Slutt
+}
+
+/// <summary>Om et internt gjøremål er lagt inn manuelt eller generert fra en regel.</summary>
+public enum GjoeremaalOpphav
+{
+    Manuell,
+    Generert
+}
+
+/// <summary>Hva et synkroniseringsforslag foreslår for en konkret runde (trinn 3).</summary>
+public enum SynkHandling
+{
+    /// <summary>Regelen er ny siden sist — legg til et gjøremål.</summary>
+    LeggTil,
+
+    /// <summary>Regelen er endret — oppdater det tilhørende gjøremålet.</summary>
+    Oppdater,
+
+    /// <summary>Regelen er slettet — fjern det tilhørende gjøremålet.</summary>
+    Fjern
+}

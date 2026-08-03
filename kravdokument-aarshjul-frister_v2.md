@@ -396,3 +396,49 @@ Skrevet på formen «som rolle vil jeg … slik at …». Akseptkriterier i kurs
 - Endelig presisjonsgrad på datouttrekk (4.4) avhenger av valgt språkmodell/verktøy.
 - Behandling av kommunevalgår: egen mild variant eller likt med stortingsvalg (kap. 6) — kan besluttes i fase 3.
 - **Tilgangssikring av den delbare kalender-feeden (Endring 1, avgjøres ved Azure-utrulling).** En abonnements-`.ics`-feed hentes anonymt av kalenderklienten/Microsoft 365 og kan derfor ikke EntraID-sjekke den som ser kalenderen; den er sikret med hemmelig token + server-side gruppefiltrering + tilbakekalling. Ønskes en ekte identitetssperre («kun EntraID i departementene ser innholdet, en lekket lenke viser ingenting») samtidig med auto-oppdatering, er veien Microsoft 365-native deling via Graph (delt M365-/gruppekalender som Microsoft tilgangsstyrer). Se SYSTEMARKITEKTUR kap. 9 og beslutningsloggen 2026-07-30 for alternativene (A herding, B Graph, C sperre sensitive grupper fra feed).
+
+---
+
+## 13. Internkalender for SBR (SBR-intern arbeidsliste)
+
+En egen funksjon ved siden av fristoversikten: en **intern arbeidsliste for seksjon SBR** med gjøremål som må gjøres i løpet av året. Til forskjell fra fristene (som deles gruppevis) er internkalenderen **kun for SBR** og deles aldri med andre. Den er en egen «fane» i grensesnittet.
+
+Bærende prinsipper som gjelder uendret: all tilgang håndheves på server; internkalender-data sendes aldri til en ikke-SBR-klient.
+
+### 13.1 Tilgang
+
+Internkalenderen er forbeholdt SBR. I første versjon sammenfaller **SBR med administratorrollen** (administrator gis automatisk via Entra-gruppen SBR, jf. 2.2/Endring 2), og hele funksjonen gates av en egen policy (`ErSbr`) slik at SBR senere kan skilles fra administrator uten å endre hver flate. Innenfor SBR er alt felles synlig — det er ingen gruppebasert synlighetsfiltrering inne i internkalenderen (den vanlige `synlig_for`-mekanismen for frister berøres ikke).
+
+### 13.2 Runder (rundetyper og konkrete runder)
+
+Arbeidet er organisert i **budsjettrunder**. Fire faste rundetyper instansieres per år, hver med et månedsspenn og en kalenderår-forskyvning relativt til budsjettåret (årshjulet spenner ~18 måneder):
+
+| Rundetype | Periode | Forskyvning (for budsjettår t) |
+|---|---|---|
+| Marsrunden | januar–april | år t-1 |
+| Augustrunden (inkl. gul bok/Prop. 1 S) | juli–oktober | år t-1 |
+| RNB (revidert nasjonalbudsjett) | april–mai | år t |
+| Nysalderingen | oktober–desember | år t |
+
+I tillegg finnes to bøtter: **Regnskap** (én runde per regnskapsår, arbeidet med gjennom hele året) og **Øvrig** (en stående liste uten år, for gjøremål som ikke hører til en runde; kun manuell). En **konkret runde** er (rundetype, år), f.eks. «Augustrunden 2027».
+
+### 13.3 Generelt og konkret nivå
+
+Løsningen har to nivåer, som speiler mal→generering-mønsteret for frister:
+
+- **Generelle regler (mal).** En regel beskriver et gjøremål som gjentar seg, og knyttes til **én eller flere rundetyper** (én snarvei velger «hver runde» = alle). En regel som gjelder flere rundetyper genereres inn **enkeltvis** i hver valgt runde. Regler er årsuavhengige.
+- **Konkret oppgaveplan.** Basert på reglene kan løsningen **generere** en konkret oppgaveplan for en runde. Den konkrete runden er et **snapshot** av reglene slik de var da runden ble opprettet. Åpner man en konkret runde, kan man legge inn **engangsoppgaver** som kun gjelder den runden.
+
+**Synkronisering.** En eksisterende konkret runde kan **synkroniseres** mot reglene: løsningen viser endringer siden sist (ny regel → legg til, endret regel → oppdater, slettet regel → fjern) som **forslag administrator godtar enkeltvis**. Synkronisering rører **aldri** et gjøremål som er huket av eller manuelt endret.
+
+### 13.4 Gjøremål, tidfesting og ansvarlig
+
+Et **gjøremål** krever kun en **tittel** — resten kan fylles ut senere («mangelfulle gjøremål»), slik at man raskt kan legge inn oppgaver (hurtiginnlegging). Tidfesting kan være: konkret dato, **tentativ måned** (primo/medio/ultimo), **relativt til en milepæl** (et anker-løp, f.eks. «en uke etter FAGs frist for innlevering» — samme mekanisme som gjentaksreglenes `relativ_til_milepael`), eller en **posisjon i runden** (tidlig/midt/sent). Finner løsningen ingen anker-frist for rundens år, markeres gjøremålet «venter på ankerdato» framfor å gjette. Hvert gjøremål kan ha **flere ansvarlige**, valgt fra en liste over SBR-brukere (Entra) eller lagt inn som fritekst.
+
+### 13.5 Avhuking, aktiv/ferdig og «mine gjøremål»
+
+Man kan **huke av** når noe er gjort. Systemet lagrer **hvem** som huket av og **når**; alle i SBR ser hvem det var. Huker man av en oppgave man **ikke** er ansvarlig for, kreves en bekreftelse. En avhuket oppgave flyttes til en **«ferdig»-visning**; den «aktive» visningen viser gjenstående oppgaver **sortert på når de skal gjøres** (udaterte sist). En avsluttet oppgave kan **åpnes igjen**. Man kan **filtrere på ansvarlig** i en runde («kun mine»), og en egen **«Mine gjøremål»**-visning viser aktive oppgaver der man selv er ansvarlig **på tvers av alle runder** (f.eks. både Augustrunden 2027 og Nysalderingen 2026, som begge arbeides med høsten 2026).
+
+### 13.6 Avgrensning v1
+
+Internkalenderen er i første versjon en ren i-app-funksjon: ingen eksport til Word/Outlook/abonnementsfeed og ingen varsler. Dette kan legges til senere ved å gjenbruke de eksisterende eksport-/varselmekanismene.

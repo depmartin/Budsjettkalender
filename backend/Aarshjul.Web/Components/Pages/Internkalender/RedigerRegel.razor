@@ -1,0 +1,248 @@
+@page "/internkalender/regler/ny"
+@page "/internkalender/regler/{Id:guid}"
+@using Aarshjul.Application.Internkalender
+@attribute [Authorize(Policy = Autorisasjon.ErSbr)]
+@inject IGjoeremaalRegler Regler
+@inject IInternkalender Kalender
+@inject NavigationManager Nav
+
+<PageTitle>@Tittel</PageTitle>
+
+<h1>@Tittel</h1>
+
+@if (!_lastet)
+{
+    <p class="melding">Laster …</p>
+}
+else if (_inndata is null)
+{
+    <p class="melding">Regelen finnes ikke.</p>
+}
+else
+{
+    @if (_feil is not null)
+    {
+        <div class="feil">@_feil</div>
+    }
+
+    <form class="skjema" @onsubmit="Lagre" @onsubmit:preventDefault="true">
+        <label>Tittel
+            <input @bind="_inndata.Tittel" />
+        </label>
+
+        <label>Notat
+            <textarea @bind="_inndata.Notat" rows="2"></textarea>
+        </label>
+
+        <fieldset class="synlighet">
+            <legend>Gjelder rundetyper (huk av én eller flere)</legend>
+            <label class="filtervalg">
+                <input type="checkbox" @bind:get="AlleValgt" @bind:set="VekslAlle" /> Hver runde (alle)
+            </label>
+            @foreach (var t in Runder.Genererbare)
+            {
+                <label class="filtervalg">
+                    <input type="checkbox"
+                           @bind:get="_inndata.Rundetyper.Contains(t)"
+                           @bind:set="på => VekslType(t, på)" />
+                    @Runder.Navn(t)
+                </label>
+            }
+        </fieldset>
+
+        <label>Tidfesting
+            <select @bind="_inndata.Tidfestingstype">
+                <option value="@Tidfestingstype.Ingen">Uten dato</option>
+                <option value="@Tidfestingstype.KonkretDato">Fast dag i måned</option>
+                <option value="@Tidfestingstype.TentativMaaned">Tentativ måned</option>
+                <option value="@Tidfestingstype.AnkerRelativ">Relativt til en milepæl (anker-løp)</option>
+                <option value="@Tidfestingstype.Rundeposisjon">Posisjon i runden</option>
+            </select>
+        </label>
+
+        @switch (_inndata.Tidfestingstype)
+        {
+            case Tidfestingstype.KonkretDato:
+                <div class="skjemarad">
+                    <label>Måned (1–12)<input type="number" @bind="_inndata.Maaned" style="width:6rem" /></label>
+                    <label>Dag (1–31)<input type="number" @bind="_inndata.Dag" style="width:6rem" /></label>
+                    <label>Årsjustering<input type="number" @bind="_inndata.AarforskyvningJustering" style="width:6rem" /></label>
+                </div>
+                <p class="melding">Kalenderår = rundeår + rundens standardforskyvning + årsjustering. Bruk årsjustering unntaksvis (f.eks. regnskapsoppgave som lander året etter).</p>
+                break;
+
+            case Tidfestingstype.TentativMaaned:
+                <div class="skjemarad">
+                    <label>Måned (1–12)<input type="number" @bind="_inndata.Maaned" style="width:6rem" /></label>
+                    <label>Kvalifikator
+                        <select @bind="_kvalifikatorValg">
+                            <option value="">(ingen)</option>
+                            <option value="Primo">Primo</option>
+                            <option value="Medio">Medio</option>
+                            <option value="Ultimo">Ultimo</option>
+                        </select>
+                    </label>
+                    <label>Årsjustering<input type="number" @bind="_inndata.AarforskyvningJustering" style="width:6rem" /></label>
+                </div>
+                break;
+
+            case Tidfestingstype.AnkerRelativ:
+                <div class="skjemarad">
+                    <label>Anker-løp (publisert frist)
+                        <input @bind="_inndata.AnkerLoep" list="loepliste" placeholder="f.eks. rammefordeling" />
+                        <datalist id="loepliste">
+                            <option value="marskonferanse" /><option value="rammefordeling" /><option value="fremleggelse" />
+                            <option value="gulbok" /><option value="rnb" /><option value="nysaldering" /><option value="statsregnskap" />
+                        </datalist>
+                    </label>
+                    <label>Dager forskyvning<input type="number" @bind="_inndata.AnkerOffsetDager" style="width:8rem" /></label>
+                </div>
+                break;
+
+            case Tidfestingstype.Rundeposisjon:
+                <label>Posisjon
+                    <select @bind="_inndata.Rundeposisjon">
+                        <option value="@Domain.Rundeposisjon.Start">Start av runden</option>
+                        <option value="@Domain.Rundeposisjon.Tidlig">Tidlig i runden</option>
+                        <option value="@Domain.Rundeposisjon.Midt">Midt i runden</option>
+                        <option value="@Domain.Rundeposisjon.Sent">Sent i runden</option>
+                        <option value="@Domain.Rundeposisjon.Slutt">Slutten av runden</option>
+                    </select>
+                </label>
+                break;
+        }
+
+        <fieldset class="synlighet">
+            <legend>Standard ansvarlige (kopieres til hvert generert gjøremål)</legend>
+            @if (_inndata.Ansvarlige.Count == 0)
+            {
+                <p class="melding">Ingen valgt.</p>
+            }
+            else
+            {
+                <ul class="ansvarligliste">
+                    @foreach (var a in _inndata.Ansvarlige)
+                    {
+                        <li>@a.Navn @(a.BrukerId is null ? "(fritekst)" : "")
+                            <button type="button" class="knapp-lenke" @onclick="() => _inndata.Ansvarlige.Remove(a)">fjern</button>
+                        </li>
+                    }
+                </ul>
+            }
+            <div class="skjemarad">
+                <label>Fra listen
+                    <select @bind="_valgtBrukerId">
+                        <option value="">– velg –</option>
+                        @foreach (var p in _muligeAnsvarlige.Where(p => _inndata.Ansvarlige.All(x => x.BrukerId != p.BrukerId)))
+                        {
+                            <option value="@p.BrukerId">@p.Navn</option>
+                        }
+                    </select>
+                </label>
+                <button type="button" class="knapp" style="align-self:end" @onclick="LeggTilFraListe">Legg til</button>
+                <label>Fritekst<input @bind="_fritekstNavn" placeholder="navn" /></label>
+                <button type="button" class="knapp" style="align-self:end" @onclick="LeggTilFritekst">Legg til</button>
+            </div>
+        </fieldset>
+
+        <div class="skjemarad">
+            <button type="submit" class="knapp knapp-primær">Lagre</button>
+            <button type="button" class="knapp" @onclick='() => Nav.NavigateTo("/internkalender/regler")'>Avbryt</button>
+        </div>
+    </form>
+}
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private RegelInndata? _inndata;
+    private IReadOnlyList<AnsvarligDto> _muligeAnsvarlige = [];
+    private string _kvalifikatorValg = "";
+    private string _valgtBrukerId = "";
+    private string _fritekstNavn = "";
+    private string? _feil;
+    private bool _lastet;
+
+    private string Tittel => Id is null ? "Ny regel" : "Rediger regel";
+
+    private bool AlleValgt => _inndata is not null && Runder.Genererbare.All(t => _inndata.Rundetyper.Contains(t));
+
+    protected override async Task OnInitializedAsync()
+    {
+        _muligeAnsvarlige = await Kalender.HentMuligeAnsvarligeAsync();
+        _inndata = Id is { } id ? await Regler.HentForRedigeringAsync(id) : new RegelInndata();
+        if (_inndata?.Datokvalifikator is { } k)
+        {
+            _kvalifikatorValg = k.ToString();
+        }
+        _lastet = true;
+    }
+
+    private void VekslAlle(bool på)
+    {
+        _inndata!.Rundetyper.Clear();
+        if (på)
+        {
+            _inndata.Rundetyper.AddRange(Runder.Genererbare);
+        }
+    }
+
+    private void VekslType(Rundetype t, bool på)
+    {
+        if (på)
+        {
+            if (!_inndata!.Rundetyper.Contains(t))
+            {
+                _inndata.Rundetyper.Add(t);
+            }
+        }
+        else
+        {
+            _inndata!.Rundetyper.Remove(t);
+        }
+    }
+
+    private void LeggTilFraListe()
+    {
+        var p = _muligeAnsvarlige.FirstOrDefault(x => x.BrukerId == _valgtBrukerId);
+        if (p is not null && _inndata!.Ansvarlige.All(x => x.BrukerId != p.BrukerId))
+        {
+            _inndata.Ansvarlige.Add(p);
+        }
+        _valgtBrukerId = "";
+    }
+
+    private void LeggTilFritekst()
+    {
+        if (!string.IsNullOrWhiteSpace(_fritekstNavn))
+        {
+            _inndata!.Ansvarlige.Add(new AnsvarligDto(null, _fritekstNavn.Trim()));
+            _fritekstNavn = "";
+        }
+    }
+
+    private async Task Lagre()
+    {
+        _feil = null;
+        _inndata!.Datokvalifikator =
+            _inndata.Tidfestingstype == Tidfestingstype.TentativMaaned && !string.IsNullOrEmpty(_kvalifikatorValg)
+                ? Enum.Parse<Datokvalifikator>(_kvalifikatorValg)
+                : null;
+        try
+        {
+            if (Id is { } id)
+            {
+                await Regler.OppdaterAsync(id, _inndata);
+            }
+            else
+            {
+                await Regler.OpprettAsync(_inndata);
+            }
+            Nav.NavigateTo("/internkalender/regler");
+        }
+        catch (Valideringsfeil f)
+        {
+            _feil = f.Message;
+        }
+    }
+}

@@ -39,6 +39,9 @@ public static class Demodata
 
         SeedForslag(db, frister);
         await db.SaveChangesAsync(ct);
+
+        SeedInternkalender(db);
+        await db.SaveChangesAsync(ct);
     }
 
     private static void SeedBrukere(AppDbContext db)
@@ -167,5 +170,102 @@ public static class Demodata
             Tekst = "Forslaget ditt er godkjent.",
             Lest = false
         });
+    }
+
+    /// <summary>
+    /// Seeder SBR-internkalenderen: to konkrete runder (begge arbeidet med høsten 2026, så «Mine
+    /// gjøremål» viser oppgaver på tvers), noen gjøremål med ulik tidfesting, ansvarlige og ett
+    /// generelt regelsett. Ansvarlige peker på admin-personaene (demo-admin/demo-sbr).
+    /// </summary>
+    private static void SeedInternkalender(AppDbContext db)
+    {
+        var naa = DateTimeOffset.UtcNow;
+
+        // Én generell regel (mal): forberede regjeringsnotat i alle runder.
+        var regel = new GjoeremaalRegel
+        {
+            Id = Guid.NewGuid(),
+            Tittel = "Forberede r-notat til seksjonsmøtet",
+            Notat = "Standardoppgave i hver runde.",
+            Tidfestingstype = Tidfestingstype.Rundeposisjon,
+            Rundeposisjon = Rundeposisjon.Tidlig
+        };
+        foreach (var t in Runder.Genererbare)
+        {
+            regel.Rundetyper.Add(new RegelRundetype { RegelId = regel.Id, Rundetype = t });
+        }
+        regel.Ansvarlige.Add(new RegelAnsvarlig { Id = Guid.NewGuid(), RegelId = regel.Id, BrukerId = "demo-admin", Navn = "Dag Admin (administrator, FA)" });
+        db.GjoeremaalRegler.Add(regel);
+
+        // Augustrunden 2027 (arbeid jul–okt 2026).
+        var august = new InternRunde { Id = Guid.NewGuid(), Rundetype = Rundetype.Augustrunden, Aar = 2027, OpprettetTid = naa, OpprettetAv = "Dag Admin" };
+        db.InternRunder.Add(august);
+        LeggGjoeremaal(db, august.Id, "Sammenstille satsingsforslag fra avdelingene",
+            Tidfestingstype.KonkretDato, new DateOnly(2026, 8, 20), null,
+            [("demo-admin", "Dag Admin (administrator, FA)")], GjoeremaalOpphav.Manuell, null);
+        LeggGjoeremaal(db, august.Id, "Kvalitetssikre tabeller til Gul bok",
+            Tidfestingstype.TentativMaaned, new DateOnly(2026, 9, 1), Datokvalifikator.Medio,
+            [("demo-sbr", "Sivert SBR (seksjon SBR – blir admin automatisk)")], GjoeremaalOpphav.Manuell, null);
+        LeggGjoeremaal(db, august.Id, "Forberede r-notat til seksjonsmøtet",
+            Tidfestingstype.Rundeposisjon, Runder.Posisjonsdag(Rundetype.Augustrunden, 2027, Rundeposisjon.Tidlig), null,
+            [("demo-admin", "Dag Admin (administrator, FA)")], GjoeremaalOpphav.Generert, regel.Id, Rundeposisjon.Tidlig);
+        // En ferdig oppgave.
+        var ferdig = LeggGjoeremaal(db, august.Id, "Booke møterom til budsjettkonferansen",
+            Tidfestingstype.KonkretDato, new DateOnly(2026, 7, 10), null,
+            [], GjoeremaalOpphav.Manuell, null);
+        ferdig.Status = GjoeremaalStatus.Fullfoert;
+        ferdig.FullfoertAvId = "demo-sbr";
+        ferdig.FullfoertAvNavn = "Sivert SBR (seksjon SBR – blir admin automatisk)";
+        ferdig.FullfoertTid = naa;
+
+        // Nysalderingen 2026 (arbeid okt–des 2026).
+        var nys = new InternRunde { Id = Guid.NewGuid(), Rundetype = Rundetype.Nysaldering, Aar = 2026, OpprettetTid = naa, OpprettetAv = "Dag Admin" };
+        db.InternRunder.Add(nys);
+        LeggGjoeremaal(db, nys.Id, "Innhente oppdaterte anslag fra avdelingene",
+            Tidfestingstype.KonkretDato, new DateOnly(2026, 11, 5), null,
+            [("demo-admin", "Dag Admin (administrator, FA)")], GjoeremaalOpphav.Manuell, null);
+        LeggGjoeremaal(db, nys.Id, "Utkast til nysalderingsproposisjon",
+            Tidfestingstype.Rundeposisjon, Runder.Posisjonsdag(Rundetype.Nysaldering, 2026, Rundeposisjon.Sent), null,
+            [("demo-sbr", "Sivert SBR (seksjon SBR – blir admin automatisk)")], GjoeremaalOpphav.Manuell, null, Rundeposisjon.Sent);
+
+        // Øvrig-bøtta med en løs oppgave uten dato (mangelfullt gjøremål).
+        var ovrig = new InternRunde { Id = Guid.NewGuid(), Rundetype = Rundetype.Ovrig, Aar = null, OpprettetTid = naa, OpprettetAv = "Dag Admin" };
+        db.InternRunder.Add(ovrig);
+        LeggGjoeremaal(db, ovrig.Id, "Rydde i seksjonens fellesområde",
+            Tidfestingstype.Ingen, null, null, [], GjoeremaalOpphav.Manuell, null);
+    }
+
+    private static InterntGjoeremaal LeggGjoeremaal(
+        AppDbContext db, Guid rundeId, string tittel,
+        Tidfestingstype type, DateOnly? dato, Datokvalifikator? kvalifikator,
+        (string BrukerId, string Navn)[] ansvarlige, GjoeremaalOpphav opphav, Guid? regelId,
+        Rundeposisjon? rundeposisjon = null)
+    {
+        var g = new InterntGjoeremaal
+        {
+            Id = Guid.NewGuid(),
+            RundeId = rundeId,
+            Tittel = tittel,
+            Tidfestingstype = type,
+            Dato = dato,
+            Datopresisjon = type == Tidfestingstype.TentativMaaned ? Datopresisjon.Maaned : Datopresisjon.Dag,
+            Datokvalifikator = kvalifikator,
+            Rundeposisjon = rundeposisjon,
+            Sorteringsdag = type == Tidfestingstype.Ingen ? null
+                : Datoberegning.Sorteringsdag(dato ?? default,
+                    type == Tidfestingstype.TentativMaaned ? Datopresisjon.Maaned : Datopresisjon.Dag, kvalifikator),
+            Opphav = opphav,
+            GenerertFraRegelId = regelId
+        };
+        if (type == Tidfestingstype.Ingen)
+        {
+            g.Sorteringsdag = null;
+        }
+        foreach (var (brukerId, navn) in ansvarlige)
+        {
+            g.Ansvarlige.Add(new GjoeremaalAnsvarlig { Id = Guid.NewGuid(), GjoeremaalId = g.Id, BrukerId = brukerId, Navn = navn });
+        }
+        db.InterneGjoeremaal.Add(g);
+        return g;
     }
 }

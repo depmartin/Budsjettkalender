@@ -1,0 +1,62 @@
+@page "/internkalender/mine"
+@using Aarshjul.Application.Internkalender
+@attribute [Authorize(Policy = Autorisasjon.ErSbr)]
+@inject IInternkalender Kalender
+@inject Gjeldendebrukerkilde Brukerkilde
+@inject NavigationManager Nav
+
+<PageTitle>Mine gjøremål (SBR)</PageTitle>
+
+<div class="admintopp">
+    <h1>Mine gjøremål</h1>
+    <button class="knapp" @onclick='() => Nav.NavigateTo("/internkalender")'>Til oversikten</button>
+</div>
+
+<p class="melding">
+    Aktive gjøremål der du er ansvarlig, på tvers av alle konkrete runder, sortert på når de skal gjøres.
+</p>
+
+@if (!_lastet)
+{
+    <p class="melding">Laster …</p>
+}
+else if (_mine.Count == 0)
+{
+    <p class="melding">Du har ingen aktive gjøremål akkurat nå.</p>
+}
+else
+{
+    <table class="tabell">
+        <thead>
+            <tr><th>Gjøremål</th><th>Runde</th><th>Tidspunkt</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var m in _mine)
+            {
+                <tr>
+                    <td>
+                        <a href="@($"/internkalender/gjoeremaal/{m.Gjoeremaal.Id}")"><strong>@m.Gjoeremaal.Tittel</strong></a>
+                        @if (m.Gjoeremaal.VenterPaaAnker)
+                        {
+                            <span class="merke merke-tentativ">venter på anker</span>
+                        }
+                    </td>
+                    <td><a href="@($"/internkalender/runde/{m.Gjoeremaal.RundeId}")">@m.RundeEtikett</a></td>
+                    <td>@m.Gjoeremaal.Tidsangivelse</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IReadOnlyList<MittGjoeremaalDto> _mine = [];
+    private bool _lastet;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var bruker = await Brukerkilde.HentAsync();
+        _mine = await Kalender.HentMineAsync(bruker.Id);
+        _lastet = true;
+    }
+}

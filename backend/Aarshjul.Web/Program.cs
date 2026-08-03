@@ -6,6 +6,7 @@ using Aarshjul.Application.Frister;
 using Aarshjul.Application.Generering;
 using Aarshjul.Application.Godkjenningsko;
 using Aarshjul.Application.Grupper;
+using Aarshjul.Application.Internkalender;
 using Aarshjul.Application.Kalender;
 using Aarshjul.Application.Opplasting;
 using Aarshjul.Application.Synlighet;
@@ -20,6 +21,7 @@ using Aarshjul.Infrastructure.Frister;
 using Aarshjul.Infrastructure.Generering;
 using Aarshjul.Infrastructure.Godkjenningsko;
 using Aarshjul.Infrastructure.Grupper;
+using Aarshjul.Infrastructure.Internkalender;
 using Aarshjul.Infrastructure.Kalender;
 using Aarshjul.Infrastructure.Opplasting;
 using Aarshjul.Infrastructure.Utskrift;
@@ -89,6 +91,9 @@ builder.Services.AddScoped<IGenereringstjeneste, GenereringsTjeneste>();
 builder.Services.AddScoped<IMaltjeneste, Maltjeneste>();
 builder.Services.AddScoped<IFristDatautveksling, FristDatautveksling>();
 builder.Services.AddScoped<IMalDatautveksling, MalDatautveksling>();
+// Internkalender for SBR (SBR-intern arbeidsliste).
+builder.Services.AddScoped<IInternkalender, InternkalenderTjeneste>();
+builder.Services.AddScoped<IGjoeremaalRegler, GjoeremaalRegelTjeneste>();
 // Datouttrekk + manuell dokumentopplasting (samme uttrekksledd som automatisk innhenting).
 // Heuristisk (offline) uttrekk nå; Claude-API-implementasjonen plugges inn bak IDatouttrekk (Steg E).
 builder.Services.AddSingleton<IPdftekst, PdftekstLeser>();

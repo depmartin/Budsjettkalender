@@ -1,0 +1,147 @@
+@page "/internkalender"
+@using Aarshjul.Application.Internkalender
+@attribute [Authorize(Policy = Autorisasjon.ErSbr)]
+@inject IInternkalender Kalender
+@inject Gjeldendebrukerkilde Brukerkilde
+@inject NavigationManager Nav
+
+<PageTitle>Internkalender (SBR)</PageTitle>
+
+<div class="admintopp">
+    <h1>Internkalender for SBR</h1>
+    <div>
+        <button class="knapp" @onclick='() => Nav.NavigateTo("/internkalender/mine")'>Mine gjøremål</button>
+        <button class="knapp" @onclick='() => Nav.NavigateTo("/internkalender/regler")'>Generelle regler</button>
+        <button class="knapp" @onclick="AapneOvrig">Åpne «Øvrig»</button>
+    </div>
+</div>
+
+<p class="melding">
+    SBR-intern arbeidsliste, atskilt fra de publiserte fristene. Kun SBR ser denne. Hver
+    budsjettrunde har sin egen oppgaveplan; «Øvrig» samler oppgaver som ikke hører til en runde.
+</p>
+
+<div class="internboks">
+    <h2>Ny runde</h2>
+    <div class="skjemarad">
+        <label>Rundetype
+            <select @bind="_nyType">
+                @foreach (var t in Runder.Genererbare)
+                {
+                    <option value="@t">@Runder.Navn(t)</option>
+                }
+            </select>
+        </label>
+        <label>År
+            <input type="number" @bind="_nyAar" style="width:7rem" />
+        </label>
+        <label>Fyll fra generelle regler
+            <input type="checkbox" @bind="_generer" />
+        </label>
+        <button class="knapp knapp-primær" style="align-self:end" @onclick="OpprettRunde">Opprett runde</button>
+    </div>
+    @if (_feil is not null)
+    {
+        <div class="feil">@_feil</div>
+    }
+</div>
+
+@if (!_lastet)
+{
+    <p class="melding">Laster …</p>
+}
+else
+{
+    <table class="tabell">
+        <thead>
+            <tr><th>Runde</th><th>Aktive</th><th>Ferdige</th><th>Sist synk.</th><th></th></tr>
+        </thead>
+        <tbody>
+            @foreach (var r in _runder)
+            {
+                <tr>
+                    <td><a href="@($"/internkalender/runde/{r.Id}")"><strong>@r.Etikett</strong></a></td>
+                    <td>@r.AntallAktive</td>
+                    <td>@r.AntallFullfoerte</td>
+                    <td>@(r.SistSynkronisert?.LocalDateTime.ToString("dd.MM.yyyy") ?? "–")</td>
+                    <td>
+                        <a href="@($"/internkalender/runde/{r.Id}")">Åpne</a>
+                        <button class="knapp-lenke" @onclick="() => Slett(r.Id, r.Etikett)">Slett</button>
+                    </td>
+                </tr>
+            }
+            @if (_runder.Count == 0)
+            {
+                <tr><td colspan="5" class="melding">Ingen runder opprettet ennå.</td></tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (_bekreftSlett is not null)
+{
+    <div class="bekreftboks">
+        <p>Slette runden «@_bekreftSlettEtikett» med alle gjøremål? Dette kan ikke angres.</p>
+        <button class="knapp knapp-primær" @onclick="BekreftSlett">Ja, slett</button>
+        <button class="knapp" @onclick="() => _bekreftSlett = null">Avbryt</button>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<RundeDto> _runder = [];
+    private bool _lastet;
+    private Rundetype _nyType = Rundetype.Marsrunden;
+    private int _nyAar = DateTime.UtcNow.Year + 1;
+    private bool _generer = true;
+    private string? _feil;
+    private Guid? _bekreftSlett;
+    private string _bekreftSlettEtikett = "";
+
+    protected override async Task OnInitializedAsync() => await Last();
+
+    private async Task Last()
+    {
+        _runder = await Kalender.HentRunderAsync();
+        _lastet = true;
+    }
+
+    private async Task OpprettRunde()
+    {
+        _feil = null;
+        try
+        {
+            var bruker = await Brukerkilde.HentAsync();
+            var id = _generer
+                ? await Kalender.GenererRundeAsync(_nyType, _nyAar, bruker.Navn)
+                : await Kalender.OpprettRundeAsync(_nyType, _nyAar, bruker.Navn);
+            Nav.NavigateTo($"/internkalender/runde/{id}");
+        }
+        catch (Valideringsfeil f)
+        {
+            _feil = f.Message;
+        }
+    }
+
+    private async Task AapneOvrig()
+    {
+        var bruker = await Brukerkilde.HentAsync();
+        var id = await Kalender.HentEllerOpprettOvrigAsync(bruker.Navn);
+        Nav.NavigateTo($"/internkalender/runde/{id}");
+    }
+
+    private void Slett(Guid id, string etikett)
+    {
+        _bekreftSlett = id;
+        _bekreftSlettEtikett = etikett;
+    }
+
+    private async Task BekreftSlett()
+    {
+        if (_bekreftSlett is { } id)
+        {
+            await Kalender.SlettRundeAsync(id);
+            _bekreftSlett = null;
+            await Last();
+        }
+    }
+}

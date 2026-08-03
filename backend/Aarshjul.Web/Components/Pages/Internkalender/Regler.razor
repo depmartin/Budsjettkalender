@@ -1,0 +1,71 @@
+@page "/internkalender/regler"
+@using Aarshjul.Application.Internkalender
+@attribute [Authorize(Policy = Autorisasjon.ErSbr)]
+@inject IGjoeremaalRegler RegelTjeneste
+@inject NavigationManager Nav
+
+<PageTitle>Generelle regler (internkalender)</PageTitle>
+
+<div class="admintopp">
+    <h1>Generelle regler</h1>
+    <div>
+        <button class="knapp" @onclick='() => Nav.NavigateTo("/internkalender")'>Til oversikten</button>
+        <button class="knapp knapp-primær" @onclick='() => Nav.NavigateTo("/internkalender/regler/ny")'>Ny regel</button>
+    </div>
+</div>
+
+<p class="melding">
+    En generell regel beskriver et gjøremål som genereres inn i én eller flere rundetypers konkrete
+    planer. «Fyll fra generelle regler» ved oppretting av en runde bruker disse.
+</p>
+
+@if (!_lastet)
+{
+    <p class="melding">Laster …</p>
+}
+else if (_regler.Count == 0)
+{
+    <p class="melding">Ingen regler ennå.</p>
+}
+else
+{
+    <table class="tabell">
+        <thead>
+            <tr><th>Tittel</th><th>Gjelder runder</th><th>Tidspunkt</th><th>Ansvarlige</th><th></th></tr>
+        </thead>
+        <tbody>
+            @foreach (var r in _regler)
+            {
+                <tr>
+                    <td><strong>@r.Tittel</strong></td>
+                    <td>@string.Join(", ", r.Rundetyper.Select(Runder.Navn))</td>
+                    <td>@r.Tidsangivelse</td>
+                    <td>@(r.Ansvarlige.Count == 0 ? "—" : string.Join(", ", r.Ansvarlige.Select(a => a.Navn)))</td>
+                    <td>
+                        <a href="@($"/internkalender/regler/{r.Id}")">Rediger</a>
+                        <button class="knapp-lenke" @onclick="() => Slett(r.Id)">Slett</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IReadOnlyList<RegelDto> _regler = [];
+    private bool _lastet;
+
+    protected override async Task OnInitializedAsync() => await Last();
+
+    private async Task Last()
+    {
+        _regler = await RegelTjeneste.HentAlleAsync();
+        _lastet = true;
+    }
+
+    private async Task Slett(Guid id)
+    {
+        await RegelTjeneste.SlettAsync(id);
+        await Last();
+    }
+}

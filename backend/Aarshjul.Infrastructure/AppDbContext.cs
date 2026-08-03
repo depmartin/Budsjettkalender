@@ -23,6 +23,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<InnhentingsStatus> InnhentingsStatuser => Set<InnhentingsStatus>();
     public DbSet<Kalenderabonnement> Kalenderabonnementer => Set<Kalenderabonnement>();
 
+    // --- Internkalender for SBR (SBR-intern arbeidsliste) ---
+    public DbSet<InternRunde> InternRunder => Set<InternRunde>();
+    public DbSet<InterntGjoeremaal> InterneGjoeremaal => Set<InterntGjoeremaal>();
+    public DbSet<GjoeremaalAnsvarlig> GjoeremaalAnsvarlige => Set<GjoeremaalAnsvarlig>();
+    public DbSet<GjoeremaalRegel> GjoeremaalRegler => Set<GjoeremaalRegel>();
+    public DbSet<RegelRundetype> RegelRundetyper => Set<RegelRundetype>();
+    public DbSet<RegelAnsvarlig> RegelAnsvarlige => Set<RegelAnsvarlig>();
+
     protected override void OnModelCreating(ModelBuilder b)
     {
         // --- Synlighetsgruppe: Kode er stabil, unik nøkkel det refereres til fra synlig_for ---
@@ -139,6 +147,62 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasKey(x => x.Id);
             e.Property(x => x.Kilde).HasMaxLength(64);
             e.HasIndex(x => x.Kilde).IsUnique();
+        });
+
+        // --- Internkalender: konkret runde ---
+        b.Entity<InternRunde>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.OpprettetAv).HasMaxLength(256);
+            e.HasIndex(x => new { x.Rundetype, x.Aar });
+        });
+
+        // --- Internkalender: internt gjøremål ---
+        b.Entity<InterntGjoeremaal>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Tittel).HasMaxLength(512);
+            e.Property(x => x.AnkerLoep).HasMaxLength(128);
+            e.Property(x => x.FullfoertAvId).HasMaxLength(128);
+            e.Property(x => x.FullfoertAvNavn).HasMaxLength(256);
+            e.HasIndex(x => x.RundeId);
+            e.HasIndex(x => x.Sorteringsdag);
+            e.HasOne(x => x.Runde).WithMany(r => r.Gjoeremaal)
+                .HasForeignKey(x => x.RundeId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(x => x.Ansvarlige).WithOne(a => a.Gjoeremaal)
+                .HasForeignKey(a => a.GjoeremaalId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<GjoeremaalAnsvarlig>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.BrukerId).HasMaxLength(128);
+            e.Property(x => x.Navn).HasMaxLength(256);
+            e.HasIndex(x => x.BrukerId);
+        });
+
+        // --- Internkalender: generell regel (mal) ---
+        b.Entity<GjoeremaalRegel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Tittel).HasMaxLength(512);
+            e.Property(x => x.AnkerLoep).HasMaxLength(128);
+            e.HasMany(x => x.Rundetyper).WithOne(r => r.Regel)
+                .HasForeignKey(r => r.RegelId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(x => x.Ansvarlige).WithOne(a => a.Regel)
+                .HasForeignKey(a => a.RegelId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<RegelRundetype>(e =>
+        {
+            e.HasKey(x => new { x.RegelId, x.Rundetype });
+        });
+
+        b.Entity<RegelAnsvarlig>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.BrukerId).HasMaxLength(128);
+            e.Property(x => x.Navn).HasMaxLength(256);
         });
     }
 
