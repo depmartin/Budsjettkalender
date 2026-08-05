@@ -1,12 +1,13 @@
 @inherits LayoutComponentBase
 @inject IWebHostEnvironment Env
 
-<div class="side">
-    @if (ErDemo)
-    {
-        <div class="demobanner">Demo-modus — lokal kjøring uten Entra/Azure SQL. <a href="/demo">Bytt persona</a></div>
-    }
-    <header class="topplinje">
+@if (ErDemo)
+{
+    <div class="demobanner">Demo-modus — lokal kjøring uten Entra/Azure SQL. <a href="/demo">Bytt persona</a></div>
+}
+
+<header class="topplinje">
+    <div class="topplinje-inner">
         <a class="merkenavn" href="/">Årshjul for budsjettfrister</a>
         <nav class="hovednav">
             <NavLink href="/kalender" Match="NavLinkMatch.All">Kalender</NavLink>
@@ -43,12 +44,12 @@
                 </NotAuthorized>
             </AuthorizeView>
         </div>
-    </header>
+    </div>
+</header>
 
-    <main class="innhold">
-        @Body
-    </main>
-</div>
+<main class="side innhold">
+    @Body
+</main>
 
 @code {
     private bool ErDemo => Env.IsEnvironment("Demo");

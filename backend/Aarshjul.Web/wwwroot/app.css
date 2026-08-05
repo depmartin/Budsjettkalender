@@ -91,20 +91,26 @@ input[type=checkbox], input[type=radio] { accent-color: var(--fin-morkeblaa); wi
 /* ============================================================================
    Topplinje / navigasjon
    ============================================================================ */
+/* Full-bredde topplinje med all navigasjon på én horisontal linje. */
 .topplinje {
+    background: var(--hvit);
+    border-bottom: 2px solid var(--fin-morkeblaa);
+    box-shadow: var(--skygge);
+}
+.topplinje-inner {
+    max-width: 1400px;
+    margin: 0 auto;
     display: flex;
     align-items: center;
     gap: 1.25rem;
-    padding: 0.85rem 0;
-    margin-bottom: 0.25rem;
-    border-bottom: 2px solid var(--fin-morkeblaa);
-    flex-wrap: wrap;
+    padding: 0.7rem 1.25rem;
 }
 
 .merkenavn {
     display: inline-flex;
     align-items: center;
     gap: 0.55rem;
+    flex: none;
     font-weight: 700;
     font-size: 1.05rem;
     color: var(--fin-morkeblaa);
@@ -123,13 +129,24 @@ input[type=checkbox], input[type=radio] { accent-color: var(--fin-morkeblaa); wi
 }
 .merkenavn:hover { text-decoration: none; }
 
-.hovednav { display: flex; gap: 0.15rem; flex: 1; flex-wrap: wrap; }
+/* Én horisontal linje: bryter aldri, men scroller horisontalt på smale skjermer. */
+.hovednav {
+    display: flex;
+    gap: 0.15rem;
+    flex: 1;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+.hovednav::-webkit-scrollbar { height: 5px; }
+.hovednav::-webkit-scrollbar-thumb { background: var(--kant-sterk); border-radius: 3px; }
 .hovednav a {
     text-decoration: none;
-    padding: 0.35rem 0.7rem;
+    padding: 0.35rem 0.65rem;
     border-radius: var(--radius-pill);
     color: var(--dempet);
-    font-size: 0.92rem;
+    font-size: 0.9rem;
     font-weight: 600;
     white-space: nowrap;
     transition: background 0.12s, color 0.12s;
@@ -137,8 +154,8 @@ input[type=checkbox], input[type=radio] { accent-color: var(--fin-morkeblaa); wi
 .hovednav a:hover { background: var(--fin-graa); color: var(--fin-morkeblaa); text-decoration: none; }
 .hovednav a.active { background: var(--fin-morkeblaa); color: #fff; }
 
-.bruker { display: flex; gap: 0.75rem; align-items: center; font-size: 0.9rem; }
-.brukernavn { color: var(--dempet); font-weight: 600; }
+.bruker { display: flex; gap: 0.75rem; align-items: center; font-size: 0.9rem; flex: none; }
+.brukernavn { color: var(--dempet); font-weight: 600; max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .innhold { padding-top: 1.5rem; }
 
 /* ============================================================================
@@ -265,7 +282,29 @@ input[type=checkbox], input[type=radio] { accent-color: var(--fin-morkeblaa); wi
 }
 
 /* ============================================================================
-   Årshjul — kronologisk tidslinje med skinne og punkter (pedagogisk syklus)
+   Årshjul — radiell hjulvisning (SVG)
+   ============================================================================ */
+.hjulfigur {
+    background: var(--hvit);
+    border: 1px solid var(--kant);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    margin-bottom: 1.75rem;
+    box-shadow: var(--skygge);
+    text-align: center;
+}
+.aarshjul-svg { width: 100%; max-width: 560px; height: auto; }
+.hjul-sektor { stroke: var(--kant); stroke-width: 1; }
+.hjul-ramme { fill: none; stroke: var(--kant-sterk); stroke-width: 1.5; }
+.hjul-maaned { fill: var(--dempet); font-size: 15px; font-weight: 600; }
+.hjul-senter { fill: var(--fin-morkeblaa); font-size: 20px; font-weight: 700; letter-spacing: 0.02em; }
+.hjul-punkt { cursor: pointer; transition: r 0.1s; }
+.hjul-punkt:hover { r: 9; }
+.hjullegende { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.4rem 1.1rem; margin-top: 1rem; }
+.hjullegende-post { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; font-weight: 600; color: var(--tekst); }
+
+/* ============================================================================
+   Årshjul — detaljliste (tidslinje med skinne og punkter)
    ============================================================================ */
 .hjul {
     background: var(--hvit);
@@ -379,8 +418,7 @@ tr.ferdig td:first-child { text-decoration: line-through; text-decoration-color:
    Responsivt
    ============================================================================ */
 @media (max-width: 720px) {
-    .topplinje { gap: 0.75rem; }
-    .hovednav { order: 3; width: 100%; }
+    .topplinje-inner { gap: 0.75rem; padding: 0.6rem 1rem; }
     .hjul-dato { min-width: 100%; }
     .tabell thead { display: none; }
     .tabell td { display: block; border-top: none; }
