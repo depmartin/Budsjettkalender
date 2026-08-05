@@ -22,6 +22,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Varsel> Varsler => Set<Varsel>();
     public DbSet<InnhentingsStatus> InnhentingsStatuser => Set<InnhentingsStatus>();
     public DbSet<Kalenderabonnement> Kalenderabonnementer => Set<Kalenderabonnement>();
+    public DbSet<Sidetekst> Sidetekster => Set<Sidetekst>();
 
     // --- Internkalender for SBR (SBR-intern arbeidsliste) ---
     public DbSet<InternRunde> InternRunder => Set<InternRunde>();
@@ -147,6 +148,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasKey(x => x.Id);
             e.Property(x => x.Kilde).HasMaxLength(64);
             e.HasIndex(x => x.Kilde).IsUnique();
+        });
+
+        // --- Redigerbar flate-tekst (nøkkel → tekst) ---
+        b.Entity<Sidetekst>(e =>
+        {
+            e.HasKey(x => x.Nokkel);
+            e.Property(x => x.Nokkel).HasMaxLength(128);
         });
 
         // --- Internkalender: konkret runde ---

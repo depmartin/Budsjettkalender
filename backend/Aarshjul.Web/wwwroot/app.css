@@ -154,14 +154,27 @@ input[type=checkbox], input[type=radio] { accent-color: var(--fin-morkeblaa); wi
 .hovednav a:hover { background: var(--fin-graa); color: var(--fin-morkeblaa); text-decoration: none; }
 .hovednav a.active { background: var(--fin-morkeblaa); color: #fff; }
 
-.bruker { display: flex; gap: 0.75rem; align-items: center; font-size: 0.9rem; flex: none; }
-.brukernavn { color: var(--dempet); font-weight: 600; max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bruker { display: flex; gap: 0.6rem; align-items: center; font-size: 0.9rem; flex: none; }
+.avatar {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 2rem; height: 2rem; border-radius: 50%;
+    background: var(--fin-morkeblaa); color: #fff;
+    font-size: 0.78rem; font-weight: 700; letter-spacing: 0.02em; flex: none; cursor: default;
+}
 .innhold { padding-top: 1.5rem; }
 
 /* ============================================================================
    Tekst, meldinger, hjelp
    ============================================================================ */
-.ingress { color: var(--dempet); margin: 0 0 1.25rem; font-size: 1.05rem; max-width: 62ch; }
+.ingress { color: var(--dempet); margin: 0 0 0.35rem; font-size: 1.05rem; max-width: 68ch; }
+.ingressblokk { margin-bottom: 1.25rem; }
+.ingress-blyant {
+    border: none; background: none; padding: 0; cursor: pointer; font: inherit;
+    font-size: 0.82rem; font-weight: 600; color: var(--lenke); text-decoration: none;
+}
+.ingress-blyant:hover { text-decoration: underline; }
+.ingress-rediger { width: 100%; max-width: 68ch; padding: 0.5rem 0.6rem; border: 1px solid var(--fin-mellomblaa); border-radius: var(--radius); font: inherit; box-shadow: var(--ramme-fokus); }
+.ingress-verktoy { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.5rem; }
 .melding { color: var(--dempet); padding: 1rem 0; }
 .hint { color: var(--dempet); display: block; margin-top: 0.25rem; font-size: 0.85rem; }
 
@@ -284,6 +297,12 @@ input[type=checkbox], input[type=radio] { accent-color: var(--fin-morkeblaa); wi
 /* ============================================================================
    Årshjul — radiell hjulvisning (SVG)
    ============================================================================ */
+/* Bryter (segmentert kontroll) for hjul vs. tidslinje */
+.bryter { display: inline-flex; border: 1px solid var(--kant-sterk); border-radius: var(--radius-pill); overflow: hidden; background: var(--hvit); }
+.bryter-valg { border: none; background: none; padding: 0.4rem 1.1rem; cursor: pointer; font: inherit; font-weight: 600; color: var(--dempet); }
+.bryter-valg:hover { background: var(--fin-graa); color: var(--fin-morkeblaa); }
+.bryter-valg.aktiv { background: var(--fin-morkeblaa); color: #fff; }
+
 .hjulfigur {
     background: var(--hvit);
     border: 1px solid var(--kant);
@@ -293,7 +312,21 @@ input[type=checkbox], input[type=radio] { accent-color: var(--fin-morkeblaa); wi
     box-shadow: var(--skygge);
     text-align: center;
 }
-.aarshjul-svg { width: 100%; max-width: 560px; height: auto; }
+.hjulwrap { position: relative; display: inline-block; width: 100%; margin: 0 auto; }
+.aarshjul-svg { width: 100%; height: auto; }
+.hjul-aarlabel { font-size: 13px; font-weight: 700; }
+
+/* Forklaringsboks som følger det uthevede punktet (peker ikke, tar ikke hover) */
+.hjulboks {
+    position: absolute; transform: translate(-50%, calc(-100% - 14px));
+    background: var(--hvit); border: 1px solid var(--kant); border-top: 3px solid var(--fin-morkeblaa);
+    border-radius: var(--radius); box-shadow: var(--skygge-lg);
+    padding: 0.5rem 0.7rem; min-width: 12rem; max-width: 20rem; text-align: left;
+    pointer-events: none; z-index: 20;
+}
+.hjulboks-dato { font-weight: 700; color: var(--fin-morkeblaa); font-size: 0.85rem; }
+.hjulboks-tittel { margin: 0.15rem 0 0.4rem; font-size: 0.95rem; }
+.hjulboks-merker { display: flex; gap: 0.3rem; flex-wrap: wrap; }
 .hjul-sektor { stroke: var(--kant); stroke-width: 1; }
 .hjul-ramme { fill: none; stroke: var(--kant-sterk); stroke-width: 1.5; }
 .hjul-maaned { fill: var(--dempet); font-size: 15px; font-weight: 600; }
@@ -331,6 +364,8 @@ input[type=checkbox], input[type=radio] { accent-color: var(--fin-morkeblaa); wi
 }
 .hjul-dato { min-width: 10rem; color: var(--dempet); font-weight: 600; font-size: 0.9rem; }
 .hjul-tittel { flex: 1; min-width: 12rem; }
+.hjul-spor li { cursor: default; border-radius: 6px; transition: background 0.1s; }
+.hjul-spor li.uthevet { background: #eef2fb; box-shadow: inset 3px 0 0 var(--fin-morkeblaa); padding-left: 0.5rem; }
 
 /* Fargekoding på budsjettår — FIN-paletten (primær først, så sekundær). */
 .aar-farge-0 { --aarfarge: #181c62; } /* mørkeblå */

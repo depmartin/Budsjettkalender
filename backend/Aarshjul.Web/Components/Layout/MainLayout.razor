@@ -36,8 +36,8 @@
         <div class="bruker">
             <AuthorizeView>
                 <Authorized>
-                    <span class="brukernavn">@context.User.Identity?.Name</span>
-                    <a href="@LoggUtUrl">Logg ut</a>
+                    <span class="avatar" title="@context.User.Identity?.Name">@Initialer(context.User.Identity?.Name)</span>
+                    <a href="@LoggUtUrl" title="Logg ut">Logg ut</a>
                 </Authorized>
                 <NotAuthorized>
                     <a href="@LoggInnUrl">Logg inn</a>
@@ -55,6 +55,21 @@
     private bool ErDemo => Env.IsEnvironment("Demo");
     private string LoggInnUrl => ErDemo ? "/demo" : "MicrosoftIdentity/Account/SignIn";
     private string LoggUtUrl => ErDemo ? "/demo/logg-ut" : "MicrosoftIdentity/Account/SignOut";
+
+    /// <summary>Initialer fra de to første ordene i navnet (til avatar-boblen). Fullt navn vises som tooltip.</summary>
+    private static string Initialer(string? navn)
+    {
+        if (string.IsNullOrWhiteSpace(navn))
+        {
+            return "?";
+        }
+        var ord = navn.Split([' ', '-'], StringSplitOptions.RemoveEmptyEntries)
+            .Where(o => char.IsLetter(o[0]))
+            .Take(2)
+            .Select(o => char.ToUpperInvariant(o[0]));
+        var res = string.Concat(ord);
+        return res.Length == 0 ? "?" : res;
+    }
 }
 
 <div id="blazor-error-ui" data-nosnippet>

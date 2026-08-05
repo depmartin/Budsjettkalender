@@ -1,0 +1,58 @@
+@* Redigerbar introtekst på en flate. Viser lagret tekst hvis administrator har overstyrt,
+   ellers flatens standardtekst. Administrator får en inline «Rediger tekst»-knapp. *@
+@using Aarshjul.Application.Sidetekster
+@inject ISidetekster Tekster
+
+<div class="ingressblokk">
+    @if (_redigerer)
+    {
+        <textarea class="ingress-rediger" rows="3" @bind="_utkast" @bind:event="oninput"></textarea>
+        <div class="ingress-verktoy">
+            <button class="knapp knapp-primær" @onclick="Lagre">Lagre</button>
+            <button class="knapp" @onclick="Avbryt">Avbryt</button>
+            <button class="knapp-lenke" @onclick="Tilbakestill">Tilbakestill til standard</button>
+        </div>
+    }
+    else
+    {
+        <p class="ingress">@Vist</p>
+        <AuthorizeView Policy="@Autorisasjon.ErAdministrator">
+            <button class="ingress-blyant" title="Rediger denne teksten" @onclick="StartRediger">✎ Rediger tekst</button>
+        </AuthorizeView>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Nokkel { get; set; } = default!;
+    [Parameter, EditorRequired] public string Standard { get; set; } = default!;
+
+    private string? _lagret;
+    private bool _redigerer;
+    private string _utkast = "";
+
+    private string Vist => string.IsNullOrWhiteSpace(_lagret) ? Standard : _lagret!;
+
+    protected override async Task OnInitializedAsync() => _lagret = await Tekster.HentAsync(Nokkel);
+
+    private void StartRediger()
+    {
+        _utkast = Vist;
+        _redigerer = true;
+    }
+
+    private void Avbryt() => _redigerer = false;
+
+    private async Task Lagre()
+    {
+        await Tekster.LagreAsync(Nokkel, _utkast);
+        _lagret = string.IsNullOrWhiteSpace(_utkast) ? null : _utkast.Trim();
+        _redigerer = false;
+    }
+
+    private async Task Tilbakestill()
+    {
+        await Tekster.LagreAsync(Nokkel, null);
+        _lagret = null;
+        _redigerer = false;
+    }
+}

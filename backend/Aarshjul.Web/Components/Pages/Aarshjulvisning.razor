@@ -6,8 +6,16 @@
 
 <PageTitle>Årshjul</PageTitle>
 
-<h1>Årshjul</h1>
-<p class="ingress">Ett budsjettløp i sin helhet, som en syklus gjennom året. Hver farget ring er ett budsjettår; hvert punkt er en frist plassert på datoen sin (hold over for detaljer).</p>
+<div class="admintopp">
+    <h1>Årshjul</h1>
+    <div class="bryter" role="group" aria-label="Velg fremstilling">
+        <button class="bryter-valg @(_visHjul ? "aktiv" : "")" @onclick="() => _visHjul = true">Hjul</button>
+        <button class="bryter-valg @(!_visHjul ? "aktiv" : "")" @onclick="() => _visHjul = false">Tidslinje</button>
+    </div>
+</div>
+
+<Ingress Nokkel="aarshjul.ingress"
+         Standard="Ett budsjettløp i sin helhet, kronologisk gjennom syklusen. Fargen viser budsjettår; hold musen over et punkt for detaljer." />
 
 <Filterpanel TilgjengeligeAar="TilgjengeligeAar" />
 
@@ -26,11 +34,38 @@ else if (Frister.Count == 0)
 else
 {
     var aar = Frister.Select(f => f.Budsjettaar).Distinct().OrderBy(a => a).ToList();
+    var figur = _visHjul ? BeregnHjul(aar) : BeregnLineaer(aar);
 
     <div class="hjulfigur">
-        <svg viewBox="0 0 @Diagram @Diagram" role="img" aria-label="Årshjul med frister fordelt gjennom året" class="aarshjul-svg">
-            @((MarkupString)ByggHjul(aar))
-        </svg>
+        <div class="hjulwrap" style="max-width:@(_visHjul ? "560" : "960")px">
+            <svg viewBox="0 0 @F(figur.W) @F(figur.H)" role="img"
+                 aria-label="Årshjul med frister fordelt gjennom året" class="aarshjul-svg">
+                @figur.Skjelett
+                @foreach (var p in figur.Punkter)
+                {
+                    var uthevet = _hoverId == p.Id;
+                    <circle cx="@F(p.X)" cy="@F(p.Y)" r="@(uthevet ? "10" : "7")"
+                            fill="@p.Farge" stroke="@(uthevet ? "#181c62" : "#fff")" stroke-width="@(uthevet ? "3" : "2")"
+                            class="hjul-punkt" @onmouseover="() => _hoverId = p.Id" @onmouseout="() => _hoverId = null" />
+                }
+            </svg>
+
+            @if (_hoverId is { } id && figur.Punkter.FirstOrDefault(x => x.Id == id) is { } valgt)
+            {
+                <div class="hjulboks" style="left:@F(valgt.X / figur.W * 100)%; top:@F(valgt.Y / figur.H * 100)%">
+                    <div class="hjulboks-dato">@Visningformat.FormatDato(valgt.Frist)</div>
+                    <div class="hjulboks-tittel">@valgt.Frist.Tittel</div>
+                    <div class="hjulboks-merker">
+                        <span class="merke merke-aar">Budsjettår @valgt.Frist.Budsjettaar</span>
+                        <span class="merke merke-kategori">@Visningformat.KategoriNavn(valgt.Frist.Kategori)</span>
+                        @if (valgt.Frist.ErTentativ)
+                        {
+                            <span class="merke merke-tentativ">tentativ</span>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
 
         <div class="hjullegende">
             @foreach (var a in aar)
@@ -48,7 +83,8 @@ else
             <ol class="hjul-spor">
                 @foreach (var frist in løp.OrderBy(f => f.Sorteringsdag))
                 {
-                    <li>
+                    <li class="@(_hoverId == frist.Id ? "uthevet" : "")"
+                        @onmouseover="() => _hoverId = frist.Id" @onmouseout="() => _hoverId = null">
                         <span class="hjul-dato">@Visningformat.FormatDato(frist)</span>
                         <span class="hjul-tittel">@frist.Tittel</span>
                         <span class="merke merke-kategori">@Visningformat.KategoriNavn(frist.Kategori)</span>
@@ -64,86 +100,107 @@ else
 }
 
 @code {
-    // --- Geometri for hjulet (SVG-koordinater) ---
-    private const double Diagram = 620;
-    private const double Senter = 310;
-    private const double RYtre = 278;         // ytre ringkant
-    private const double RInnerste = 95;      // indre ringkant
-    private const double RMaanedstekst = 296; // månedsnavn utenfor ringen
-    private const double RRingInner = 128;    // innerste årsring
-    private const double RRingYtre = 262;     // ytterste årsring
+    private bool _visHjul = true;
+    private Guid? _hoverId;
+
+    private sealed record Punktdata(Guid Id, double X, double Y, string Farge, FristDto Frist);
+    private sealed record Figur(double W, double H, MarkupString Skjelett, List<Punktdata> Punkter);
 
     private static readonly string[] Maanedskort =
         ["Jan", "Feb", "Mar", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Des"];
 
-    /// <summary>Bygger hele hjulets SVG-innhold som markup (SVG &lt;text&gt; kolliderer ellers med Razors tekstelement).</summary>
-    private MarkupString ByggHjul(List<int> aar)
+    // ---------------------------------------------------------------- Hjul (radiell)
+    private const double HjulD = 620, HjulSenter = 310, RYtre = 278, RInnerste = 95, RMaanedstekst = 296, RRingInner = 128, RRingYtre = 262;
+
+    private Figur BeregnHjul(List<int> aar)
     {
         var sb = new StringBuilder();
-
-        // Månedsskive: sektorlinjer + månedsnavn.
         for (var m = 1; m <= 12; m++)
         {
-            var (lx1, ly1) = Punkt(RInnerste, GradForMaanedstart(m));
-            var (lx2, ly2) = Punkt(RYtre, GradForMaanedstart(m));
+            var (lx1, ly1) = HjulPunkt(RInnerste, GradForMaanedstart(m));
+            var (lx2, ly2) = HjulPunkt(RYtre, GradForMaanedstart(m));
             sb.Append($"<line x1=\"{F(lx1)}\" y1=\"{F(ly1)}\" x2=\"{F(lx2)}\" y2=\"{F(ly2)}\" class=\"hjul-sektor\" />");
-
-            var (mx, my) = Punkt(RMaanedstekst, GradForDag(m, 15));
+            var (mx, my) = HjulPunkt(RMaanedstekst, GradForDag(m, 15));
             sb.Append($"<text x=\"{F(mx)}\" y=\"{F(my)}\" class=\"hjul-maaned\" text-anchor=\"middle\" dominant-baseline=\"middle\">{Maanedskort[m - 1]}</text>");
         }
-
-        sb.Append($"<circle cx=\"{F(Senter)}\" cy=\"{F(Senter)}\" r=\"{F(RYtre)}\" class=\"hjul-ramme\" />");
-        sb.Append($"<circle cx=\"{F(Senter)}\" cy=\"{F(Senter)}\" r=\"{F(RInnerste)}\" class=\"hjul-ramme\" />");
-
-        // Én ring per budsjettår.
+        sb.Append($"<circle cx=\"{F(HjulSenter)}\" cy=\"{F(HjulSenter)}\" r=\"{F(RYtre)}\" class=\"hjul-ramme\" />");
+        sb.Append($"<circle cx=\"{F(HjulSenter)}\" cy=\"{F(HjulSenter)}\" r=\"{F(RInnerste)}\" class=\"hjul-ramme\" />");
         for (var i = 0; i < aar.Count; i++)
         {
             var r = RadiusForIndeks(i, aar.Count);
-            sb.Append($"<circle cx=\"{F(Senter)}\" cy=\"{F(Senter)}\" r=\"{F(r)}\" fill=\"none\" stroke=\"{Visningformat.FargeForAar(aar[i])}\" stroke-opacity=\"0.28\" stroke-width=\"2\" />");
+            sb.Append($"<circle cx=\"{F(HjulSenter)}\" cy=\"{F(HjulSenter)}\" r=\"{F(r)}\" fill=\"none\" stroke=\"{Visningformat.FargeForAar(aar[i])}\" stroke-opacity=\"0.28\" stroke-width=\"2\" />");
         }
+        sb.Append($"<text x=\"{F(HjulSenter)}\" y=\"{F(HjulSenter)}\" class=\"hjul-senter\" text-anchor=\"middle\" dominant-baseline=\"middle\">Årshjul</text>");
 
-        // Frist-punkter med native tooltip (<title>).
-        foreach (var frist in Frister)
+        var punkter = Frister.Select(f =>
         {
-            var r = RadiusForIndeks(aar.IndexOf(frist.Budsjettaar), aar.Count);
-            var (px, py) = Punkt(r, GradForDato(frist.Sorteringsdag));
-            var tooltip = System.Net.WebUtility.HtmlEncode(
-                $"{Visningformat.FormatDato(frist)} – {frist.Tittel}{(frist.ErTentativ ? " (tentativ)" : "")}");
-            sb.Append($"<circle cx=\"{F(px)}\" cy=\"{F(py)}\" r=\"7\" fill=\"{Visningformat.FargeForAar(frist.Budsjettaar)}\" stroke=\"#fff\" stroke-width=\"2\" class=\"hjul-punkt\"><title>{tooltip}</title></circle>");
-        }
+            var r = RadiusForIndeks(aar.IndexOf(f.Budsjettaar), aar.Count);
+            var (px, py) = HjulPunkt(r, GradForDato(f.Sorteringsdag));
+            return new Punktdata(f.Id, px, py, Visningformat.FargeForAar(f.Budsjettaar), f);
+        }).ToList();
 
-        sb.Append($"<text x=\"{F(Senter)}\" y=\"{F(Senter)}\" class=\"hjul-senter\" text-anchor=\"middle\" dominant-baseline=\"middle\">Årshjul</text>");
-
-        return new MarkupString(sb.ToString());
+        return new Figur(HjulD, HjulD, new MarkupString(sb.ToString()), punkter);
     }
 
-    /// <summary>Radius for budsjettår nr. <paramref name="i"/> av <paramref name="antall"/> (jevnt fordelt; midt ved ett år).</summary>
     private static double RadiusForIndeks(int i, int antall)
     {
         if (i < 0) i = 0;
         return antall <= 1 ? (RRingInner + RRingYtre) / 2 : RRingInner + (RRingYtre - RRingInner) * i / (antall - 1);
     }
 
-    /// <summary>Vinkel (grader) for en dato: Jan 1 øverst (kl. 12), med klokken gjennom året.</summary>
-    private static double GradForDato(DateOnly d)
+    private static (double X, double Y) HjulPunkt(double radius, double grader)
+    {
+        var rad = grader * Math.PI / 180.0;
+        return (HjulSenter + radius * Math.Cos(rad), HjulSenter + radius * Math.Sin(rad));
+    }
+
+    private static double GradForDato(DateOnly d) => Frac(d) * 360 - 90;
+    private static double GradForMaanedstart(int m) => GradForDato(new DateOnly(2027, m, 1));
+    private static double GradForDag(int m, int dag) => GradForDato(new DateOnly(2027, m, dag));
+
+    // ---------------------------------------------------------------- Lineær tidslinje
+    private const double LinW = 960, LinVenstre = 70, LinHoyre = 28, LinTopp = 46, LinLane = 60, LinBunn = 24;
+
+    private Figur BeregnLineaer(List<int> aar)
+    {
+        var h = LinTopp + aar.Count * LinLane + LinBunn;
+        var sb = new StringBuilder();
+
+        // Månedsrutenett + labels øverst.
+        for (var m = 1; m <= 12; m++)
+        {
+            var x = LinX(Frac(new DateOnly(2027, m, 1)));
+            sb.Append($"<line x1=\"{F(x)}\" y1=\"{F(LinTopp - 8)}\" x2=\"{F(x)}\" y2=\"{F(h - LinBunn)}\" class=\"hjul-sektor\" />");
+            var xl = LinX(Frac(new DateOnly(2027, m, 15)));
+            sb.Append($"<text x=\"{F(xl)}\" y=\"22\" class=\"hjul-maaned\" text-anchor=\"middle\">{Maanedskort[m - 1]}</text>");
+        }
+
+        // Én vannrett stripe per budsjettår med årsetikett til venstre.
+        for (var i = 0; i < aar.Count; i++)
+        {
+            var y = LinLaneY(i);
+            sb.Append($"<line x1=\"{F(LinX(0))}\" y1=\"{F(y)}\" x2=\"{F(LinX(1))}\" y2=\"{F(y)}\" stroke=\"{Visningformat.FargeForAar(aar[i])}\" stroke-opacity=\"0.5\" stroke-width=\"2\" />");
+            sb.Append($"<text x=\"6\" y=\"{F(y - 8)}\" class=\"hjul-aarlabel\" fill=\"{Visningformat.FargeForAar(aar[i])}\">{aar[i]}</text>");
+        }
+
+        var punkter = Frister.Select(f =>
+            new Punktdata(f.Id, LinX(Frac(f.Sorteringsdag)), LinLaneY(aar.IndexOf(f.Budsjettaar)),
+                Visningformat.FargeForAar(f.Budsjettaar), f)).ToList();
+
+        return new Figur(LinW, h, new MarkupString(sb.ToString()), punkter);
+    }
+
+    private static double LinX(double frac) => LinVenstre + frac * (LinW - LinVenstre - LinHoyre);
+    private static double LinLaneY(int i) => LinTopp + (i < 0 ? 0 : i) * LinLane + LinLane / 2;
+
+    // ---------------------------------------------------------------- Felles
+    private static double Frac(DateOnly d)
     {
         var start = new DateOnly(d.Year, 1, 1);
         var lengde = (new DateOnly(d.Year, 12, 31).DayNumber - start.DayNumber) + 1;
-        var frac = (d.DayNumber - start.DayNumber) / (double)lengde;
-        return frac * 360 - 90;
+        return (d.DayNumber - start.DayNumber) / (double)lengde;
     }
 
-    // Månedsskive-vinkler bruker et fast referanseår (ikke-skuddår) — kun avhengig av måned/dag.
-    private static double GradForMaanedstart(int maaned) => GradForDato(new DateOnly(2027, maaned, 1));
-    private static double GradForDag(int maaned, int dag) => GradForDato(new DateOnly(2027, maaned, dag));
-
-    private static (double X, double Y) Punkt(double radius, double grader)
-    {
-        var rad = grader * Math.PI / 180.0;
-        return (Senter + radius * Math.Cos(rad), Senter + radius * Math.Sin(rad));
-    }
-
-    /// <summary>Formaterer et koordinat med punktum-desimal (SVG krever invariant kultur).</summary>
     private static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 
     protected override Task<IReadOnlyList<FristDto>> HentAsync(ISynlighetskontekst ctx)
