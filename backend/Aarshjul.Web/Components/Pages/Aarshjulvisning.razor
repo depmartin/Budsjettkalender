@@ -1,16 +1,18 @@
 @page "/aarshjul"
 @using System.Globalization
 @using System.Text
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
 @attribute [Authorize]
 @inherits Visningsside
+@inject ProtectedLocalStorage LokalLager
 
 <PageTitle>Årshjul</PageTitle>
 
 <div class="admintopp">
     <h1>Årshjul</h1>
     <div class="bryter" role="group" aria-label="Velg fremstilling">
-        <button class="bryter-valg @(_visHjul ? "aktiv" : "")" @onclick="() => _visHjul = true">Hjul</button>
-        <button class="bryter-valg @(!_visHjul ? "aktiv" : "")" @onclick="() => _visHjul = false">Tidslinje</button>
+        <button class="bryter-valg @(_visHjul ? "aktiv" : "")" @onclick="() => SettVisning(true)">Hjul</button>
+        <button class="bryter-valg @(!_visHjul ? "aktiv" : "")" @onclick="() => SettVisning(false)">Tidslinje</button>
     </div>
 </div>
 
@@ -100,8 +102,44 @@ else
 }
 
 @code {
+    private const string LagerNokkel = "aarshjul-visning";
     private bool _visHjul = true;
     private Guid? _hoverId;
+
+    /// <summary>Leser sist valgte visning (hjul/tidslinje) fra nettleseren etter første render.</summary>
+    protected override async Task OnAfterRenderAsync(bool førsteRender)
+    {
+        if (!førsteRender)
+        {
+            return;
+        }
+        try
+        {
+            var lagret = await LokalLager.GetAsync<string>(LagerNokkel);
+            if (lagret is { Success: true, Value: "tidslinje" } && _visHjul)
+            {
+                _visHjul = false;
+                StateHasChanged();
+            }
+        }
+        catch
+        {
+            // Utilgjengelig under prerender / uten JS — behold standard (hjul).
+        }
+    }
+
+    private async Task SettVisning(bool hjul)
+    {
+        _visHjul = hjul;
+        try
+        {
+            await LokalLager.SetAsync(LagerNokkel, hjul ? "hjul" : "tidslinje");
+        }
+        catch
+        {
+            // Kan ikke lagre nå — velg-tilstanden virker uansett for denne økten.
+        }
+    }
 
     private sealed record Punktdata(Guid Id, double X, double Y, string Farge, FristDto Frist);
     private sealed record Figur(double W, double H, MarkupString Skjelett, List<Punktdata> Punkter);
