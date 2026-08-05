@@ -25,7 +25,7 @@
                     <input type="checkbox"
                            @bind:get="Tilstand.Budsjettaar.Contains(aar)"
                            @bind:set="på => Tilstand.VekslBudsjettaar(aar, på)" />
-                    @aar
+                    <span class="aarprikk @Visningformat.FargeklasseForAar(aar)"></span>@aar
                 </label>
             }
             <small class="hint">Ingen valgt = alle år</small>
