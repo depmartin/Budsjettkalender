@@ -30,7 +30,7 @@ jobs:
         run: dotnet test backend/Aarshjul.slnx --configuration Release --no-build --logger trx --results-directory TestResults
       - name: Last opp testresultater
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: testresultater
           path: TestResults/*.trx
@@ -85,7 +85,7 @@ jobs:
           PY
       - name: Last opp SQL-testresultater
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sqlserver-testresultater
           path: SqlServerTestResults/*.trx
@@ -139,7 +139,7 @@ jobs:
           PY
       - name: Last opp nettleserresultater
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nettleser-testresultater
           path: BrowserTestResults/*.trx
